@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* ===== 墨韵 (Ink Rhythm) 设计系统 ===== */
+
+@theme inline {
+  /* 色彩 */
+  --color-ink-paper: #fbf7f0;
+  --color-ink-text: #2c2c2c;
+  --color-ink-accent: #8b4513;
+  --color-ink-green: #4a6741;
+  --color-ink-muted: #7a7265;
+  --color-ink-border: #d4cfc4;
+
+  /* 深色模式 */
+  --color-ink-dark-bg: #1a1a1a;
+  --color-ink-dark-text: #e5e0d8;
+  --color-ink-dark-muted: #9a9488;
+
+  /* 字体 */
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "STSong", serif;
+  --font-sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    sans-serif;
+
+  /* 阴影 */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 基础样式 */
+body {
+  background-color: var(--color-ink-paper);
+  color: var(--color-ink-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: var(--color-ink-dark-bg);
+    color: var(--color-ink-dark-text);
+  }
+}
+
+/* 链接样式 */
+a {
+  color: var(--color-ink-accent);
+  transition: color 0.2s ease;
+}
+a:hover {
+  color: var(--color-ink-green);
+}
+
+/* 文章内容样式 */
+.prose {
+  max-width: 680px;
+  line-height: 1.8;
+  font-size: 1.05rem;
+}
+.prose h1, .prose h2, .prose h3 {
+  font-family: var(--font-serif);
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+}
+.prose h1 { font-size: 2rem; }
+.prose h2 { font-size: 1.5rem; }
+.prose h3 { font-size: 1.25rem; }
+.prose p {
+  margin-bottom: 1.2em;
+}
+.prose img {
+  margin: 2em auto;
+  border-radius: 4px;
+}
