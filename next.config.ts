@@ -3,6 +3,7 @@ import createMDX from "@next/mdx";
 
 const nextConfig: NextConfig = {
   output: "export",
+  trailingSlash: true,
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   allowedDevOrigins: ["10.159.138.137"],
   images: {
