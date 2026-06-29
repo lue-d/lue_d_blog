@@ -22,8 +22,8 @@ export default function AdminLayout({
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // 登录页不需要检查
-  const isLoginPage = pathname === "/admin/login";
+  // 登录页不需要检查（trailingSlash 下 pathname 以 / 结尾）
+  const isLoginPage = pathname === "/admin/login" || pathname === "/admin/login/";
 
   useEffect(() => {
     if (isLoginPage) {
@@ -96,7 +96,7 @@ export default function AdminLayout({
                   href={item.href}
                   className={`text-sm transition-colors ${
                     (item.href === "/admin"
-                      ? pathname === "/admin"
+                      ? pathname === "/admin" || pathname === "/admin/"
                       : pathname.startsWith(item.href))
                       ? "text-ink-accent font-medium"
                       : "text-ink-muted hover:text-ink-accent"
