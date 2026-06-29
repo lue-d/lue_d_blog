@@ -1,11 +1,22 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentList } from "@/lib/content-supabase";
+import { getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
 
-export default async function PhotographyPage() {
-  const items = await getContentList("photography");
+export default function PhotographyPage() {
+  const [items, setItems] = useState<ContentMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getContentListClient("photography").then((data) => {
+      setItems(data);
+      setLoading(false);
+    });
+  }, []);
 
   return (
     <>
@@ -20,13 +31,23 @@ export default async function PhotographyPage() {
           </p>
         </div>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="break-inside-avoid">
+                <div className="rounded-lg bg-ink-border/20 animate-pulse w-full aspect-[3/2]" />
+                <div className="h-5 w-3/4 bg-ink-border/20 rounded animate-pulse mt-2" />
+                <div className="h-4 w-1/2 bg-ink-border/20 rounded animate-pulse mt-1" />
+              </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-ink-muted dark:text-ink-dark-muted mb-2">
               还没有摄影作品
             </p>
             <p className="text-sm text-ink-muted dark:text-ink-dark-muted">
-              在管理后台中创建内容即可自动展示
+              在管理后台中创建并发布内容即可自动展示
             </p>
           </div>
         ) : (

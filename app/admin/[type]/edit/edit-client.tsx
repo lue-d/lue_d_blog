@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ContentForm from "@/components/ContentForm";
 
@@ -17,9 +18,12 @@ const VALID_TYPES: ContentType[] = ["calligraphy", "photography", "reflections"]
 export default function AdminEditClient({
   params,
 }: {
-  params: Promise<{ type: string; id: string }>;
+  params: Promise<{ type: string }>;
 }) {
-  const { type, id } = use(params);
+  const { type } = use(params);
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,6 +39,20 @@ export default function AdminEditClient({
     );
   }
 
+  if (!id) {
+    return (
+      <div className="text-center py-24">
+        <p className="text-ink-muted mb-2">缺少记录 ID</p>
+        <Link
+          href={`/admin/${type}`}
+          className="text-sm text-ink-accent inline-block mt-2"
+        >
+          ← 返回管理
+        </Link>
+      </div>
+    );
+  }
+
   const ct = type as ContentType;
   const label = TYPE_LABEL[ct];
 
@@ -44,7 +62,7 @@ export default function AdminEditClient({
       const { data: item, error: fetchError } = await supabase
         .from(ct)
         .select("*")
-        .eq("id", id)
+        .eq("id", id!)
         .single();
 
       if (fetchError || !item) {

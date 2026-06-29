@@ -149,7 +149,7 @@ export default function AdminListClient({
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/admin/${ct}/${item.id}/edit`}
+                        href={`/admin/${ct}/edit?id=${item.id}`}
                         className="text-xs text-ink-accent hover:text-ink-green transition-colors"
                       >
                         编辑

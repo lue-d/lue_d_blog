@@ -1,11 +1,22 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentList } from "@/lib/content-supabase";
+import { getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
 
-export default async function CalligraphyPage() {
-  const items = await getContentList("calligraphy");
+export default function CalligraphyPage() {
+  const [items, setItems] = useState<ContentMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getContentListClient("calligraphy").then((data) => {
+      setItems(data);
+      setLoading(false);
+    });
+  }, []);
 
   return (
     <>
@@ -20,7 +31,17 @@ export default async function CalligraphyPage() {
           </p>
         </div>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i}>
+                <div className="aspect-[4/3] rounded-lg bg-ink-border/20 animate-pulse mb-3" />
+                <div className="h-5 w-3/4 bg-ink-border/20 rounded animate-pulse mb-1" />
+                <div className="h-4 w-1/2 bg-ink-border/20 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
           <EmptyState type="书法作品" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -71,7 +92,7 @@ function EmptyState({ type }: { type: string }) {
         还没有{type}
       </p>
       <p className="text-sm text-ink-muted dark:text-ink-dark-muted">
-        在管理后台中创建内容即可自动展示
+        在管理后台中创建并发布内容即可自动展示
       </p>
     </div>
   );
