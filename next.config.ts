@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
 
+// GitHub Pages 部署在子路径下，本地开发不需要
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const nextConfig: NextConfig = {
   output: "export",
+  basePath,
   trailingSlash: true,
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   allowedDevOrigins: ["10.159.138.137"],
