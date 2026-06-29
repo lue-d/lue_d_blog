@@ -2,10 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentList } from "@/lib/content";
+import { getContentList } from "@/lib/content-supabase";
 
-export default function PhotographyPage() {
-  const items = getContentList("photography");
+export default async function PhotographyPage() {
+  const items = await getContentList("photography");
 
   return (
     <>
@@ -26,7 +26,7 @@ export default function PhotographyPage() {
               还没有摄影作品
             </p>
             <p className="text-sm text-ink-muted dark:text-ink-dark-muted">
-              在 content/photography/ 目录下添加 .mdx 文件即可
+              在管理后台中创建内容即可自动展示
             </p>
           </div>
         ) : (
@@ -44,6 +44,7 @@ export default function PhotographyPage() {
                       alt={item.title}
                       width={600}
                       height={400}
+                      unoptimized
                       className="w-full h-auto group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (

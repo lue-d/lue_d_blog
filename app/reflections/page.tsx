@@ -2,10 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentList } from "@/lib/content";
+import { getContentList } from "@/lib/content-supabase";
 
-export default function ReflectionsPage() {
-  const items = getContentList("reflections");
+export default async function ReflectionsPage() {
+  const items = await getContentList("reflections");
 
   return (
     <>
@@ -26,7 +26,7 @@ export default function ReflectionsPage() {
               还没有文章
             </p>
             <p className="text-sm text-ink-muted dark:text-ink-dark-muted">
-              在 content/reflections/ 目录下添加 .mdx 文件即可
+              在管理后台中创建内容即可自动展示
             </p>
           </div>
         ) : (
@@ -44,6 +44,7 @@ export default function ReflectionsPage() {
                         src={item.cover}
                         alt={item.title}
                         fill
+                        unoptimized
                         className="object-cover"
                         sizes="96px"
                       />

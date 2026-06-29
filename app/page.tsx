@@ -2,12 +2,12 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentList } from "@/lib/content";
+import { getContentList } from "@/lib/content-supabase";
 
-export default function Home() {
-  const calligraphies = getContentList("calligraphy").slice(0, 3);
-  const photos = getContentList("photography").slice(0, 3);
-  const reflections = getContentList("reflections").slice(0, 3);
+export default async function Home() {
+  const calligraphies = (await getContentList("calligraphy")).slice(0, 3);
+  const photos = (await getContentList("photography")).slice(0, 3);
+  const reflections = (await getContentList("reflections")).slice(0, 3);
 
   return (
     <>
@@ -80,7 +80,7 @@ export default function Home() {
               内容还在准备中，先去添加一些作品吧
             </p>
             <p className="text-sm text-ink-muted dark:text-ink-dark-muted">
-              在 content/ 目录下创建 .mdx 文件即可自动展示
+              在管理后台中创建内容即可自动展示
             </p>
           </section>
         )}

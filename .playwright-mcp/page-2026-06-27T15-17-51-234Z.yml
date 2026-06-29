@@ -1,0 +1,90 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e6]:
+      - navigation [ref=e8]:
+        - link "Supabase Logo" [ref=e11] [cursor=pointer]:
+          - /url: https://supabase.com
+          - img "Supabase Logo" [ref=e12]
+        - link "Documentation" [ref=e14] [cursor=pointer]:
+          - /url: https://supabase.com/docs
+          - img [ref=e16]
+          - generic [ref=e19]: Documentation
+      - main [ref=e21]:
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - heading "Welcome back" [level=1] [ref=e24]
+            - heading "Sign in to your account" [level=2] [ref=e25]
+          - generic [ref=e26]:
+            - button "Continue with GitHub" [ref=e29] [cursor=pointer]:
+              - img [ref=e31]
+              - generic [ref=e32]: Continue with GitHub
+            - link "Continue with SSO" [ref=e35] [cursor=pointer]:
+              - /url: /dashboard/sign-in-sso
+              - img [ref=e37]
+              - generic [ref=e40]: Continue with SSO
+            - generic [ref=e45]: or
+            - generic [ref=e46]:
+              - generic [ref=e48]:
+                - generic [ref=e86]: Email
+                - textbox "Email" [disabled] [ref=e54]:
+                  - /placeholder: you@example.com
+                  - text: 1553087046@qq.com
+              - generic [ref=e55]:
+                - generic [ref=e57]:
+                  - generic [ref=e87]: Password
+                  - generic [ref=e63]:
+                    - textbox "Password" [disabled] [ref=e64]:
+                      - /placeholder: ••••••••
+                      - text: 1553087046dl
+                    - button "Show password" [disabled]:
+                      - generic:
+                        - img
+                - link "Forgot password?" [ref=e70] [cursor=pointer]:
+                  - /url: /dashboard/forgot-password?returnTo=%2Forganizations
+              - generic [ref=e72]:
+                - button "Sign in" [disabled]:
+                  - generic:
+                    - img
+                  - generic: Sign in
+          - generic [ref=e75]:
+            - text: Don’t have an account?
+            - link "Sign up" [ref=e76] [cursor=pointer]:
+              - /url: /dashboard/sign-up
+        - paragraph [ref=e78]:
+          - text: By continuing, you agree to Supabase’s
+          - link "Terms of Service" [ref=e79] [cursor=pointer]:
+            - /url: https://supabase.com/terms
+          - text: and
+          - link "Privacy Policy" [ref=e80] [cursor=pointer]:
+            - /url: https://supabase.com/privacy
+          - text: ", and to receive periodic emails with updates."
+    - region "Notifications alt+T":
+      - list:
+        - status [ref=e88]:
+          - button "Close toast" [ref=e89]:
+            - img [ref=e90]
+          - generic [ref=e109]: Signing in...
+  - alert [ref=e81]
+  - iframe [active] [ref=e112]:
+    - generic [ref=f1e2]:
+      - generic [ref=f1e5]:
+        - generic [ref=f1e8]:
+          - heading "点击与其他形状不同的那个形状" [level=2] [ref=f1e9]
+          - paragraph
+        - img "基于图像的 CAPTCHA 验证。请使用“辅助功能：检索 Cookie”或“辅助功能：文本验证”选项（如果在验证菜单中可用）。" [ref=f1e11]
+      - generic [ref=f1e12]:
+        - alert [ref=f1e13]:
+          - generic [ref=f1e14]: 请再试一次 ⚠️
+        - button "跳过挑战" [ref=f1e21] [cursor=pointer]:
+          - generic: 跳过
+      - generic [ref=f1e22]:
+        - button "ZH - Chinese，选择一种语言" [ref=f1e24] [cursor=pointer]:
+          - generic [ref=f1e25]: ZH
+        - button "About hCaptcha & Accessibility Options" [active] [ref=f1e26] [cursor=pointer]:
+          - img [ref=f1e28]
+          - img [ref=f1e33]
+        - button "刷新挑战。" [ref=f1e37] [cursor=pointer]:
+          - img [ref=f1e39]
+          - img [ref=f1e43]
+        - button "hCaptcha 徽标，打开新窗口查看更多信息" [ref=f1e46] [cursor=pointer]:
+          - img [ref=f1e49]

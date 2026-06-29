@@ -2,10 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentList } from "@/lib/content";
+import { getContentList } from "@/lib/content-supabase";
 
-export default function CalligraphyPage() {
-  const items = getContentList("calligraphy");
+export default async function CalligraphyPage() {
+  const items = await getContentList("calligraphy");
 
   return (
     <>
@@ -36,6 +36,7 @@ export default function CalligraphyPage() {
                       src={item.cover}
                       alt={item.title}
                       fill
+                      unoptimized
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
@@ -70,7 +71,7 @@ function EmptyState({ type }: { type: string }) {
         还没有{type}
       </p>
       <p className="text-sm text-ink-muted dark:text-ink-dark-muted">
-        在 content/calligraphy/ 目录下添加 .mdx 文件即可
+        在管理后台中创建内容即可自动展示
       </p>
     </div>
   );

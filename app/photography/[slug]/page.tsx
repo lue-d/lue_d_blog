@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentData } from "@/lib/content";
+import { getContentData } from "@/lib/content-supabase";
 
 type Params = Promise<{ slug: string }>;
 
@@ -32,6 +32,7 @@ export default async function PhotographyDetailPage({ params }: { params: Params
                 src={meta.cover}
                 alt={meta.title}
                 fill
+                unoptimized
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 896px"
                 priority
