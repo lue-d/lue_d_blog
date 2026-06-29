@@ -7,7 +7,7 @@
  *    → GitHub Pages 对不存在的路径返回 404.html
  *    → App Shell 加载后，客户端路由接管导航
  */
-import { copyFileSync, rmSync, existsSync } from "node:fs";
+import { copyFileSync, rmSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const outDir = join(process.cwd(), "out");
@@ -28,6 +28,11 @@ if (existsSync(notFoundAltDir)) {
   console.log("🗑️  已删除 out/_not-found/ 目录");
 }
 
-// 3. 复制 index.html → 404.html (SPA fallback)
+// 3. 创建 .nojekyll（防止 Jekyll 处理 _next/ 等目录）
+const nojekyllPath = join(outDir, ".nojekyll");
+writeFileSync(nojekyllPath, "");
+console.log("✅ 已创建 .nojekyll（禁用 Jekyll 处理）");
+
+// 4. 复制 index.html → 404.html (SPA fallback)
 copyFileSync(indexPath, notFoundPath);
 console.log("✅ 已复制 index.html → 404.html (SPA fallback)");
