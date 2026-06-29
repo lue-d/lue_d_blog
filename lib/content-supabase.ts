@@ -44,7 +44,7 @@ export async function getContentList(
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
+  return ((data || []) as unknown as Record<string, unknown>[]).map((item) => ({
     slug: item.slug as string,
     title: item.title as string,
     date: item.date ? String(item.date) : "",

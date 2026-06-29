@@ -3,9 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getContentData } from "@/lib/content-supabase";
+import { getContentData, getContentList } from "@/lib/content-supabase";
 
 type Params = Promise<{ slug: string }>;
+
+export async function generateStaticParams() {
+  const items = await getContentList("reflections");
+  return items.map((item) => ({ slug: item.slug }));
+}
 
 export default async function ReflectionDetailPage({ params }: { params: Params }) {
   const { slug } = await params;
