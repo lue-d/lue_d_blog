@@ -31,7 +31,7 @@ export default function PhotographyDetailClient({
   return (
     <>
       <Header />
-      <main className="flex-1 max-w-4xl mx-auto px-6 pt-16 pb-24">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-6 pt-16 pb-24">
         <Link
           href="/photography"
           className="text-sm text-ink-muted hover:text-ink-accent transition-colors"

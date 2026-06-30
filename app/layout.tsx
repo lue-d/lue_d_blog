@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "墨韵 · 个人博客",
-    template: "%s | 墨韵",
+    default: "与墨言 · 个人博客",
+    template: "%s | 与墨言",
   },
   description: "书法 · 摄影 · 感悟 — 用笔墨与镜头记录生活的温度",
 };

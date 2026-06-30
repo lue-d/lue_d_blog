@@ -17,7 +17,7 @@ export default function Header() {
             href="/"
             className="text-xl font-bold font-[family-name:var(--font-serif)] tracking-wider text-ink-text hover:text-ink-accent transition-colors dark:text-ink-dark-text"
           >
-            墨韵
+            与墨言
           </Link>
           <AdminLink />
         </div>

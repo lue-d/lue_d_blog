@@ -21,7 +21,7 @@ export default function PhotographyPage() {
   return (
     <>
       <Header />
-      <main className="flex-1 max-w-5xl mx-auto px-6 pt-16 pb-24">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-6 pt-16 pb-24">
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-serif)] tracking-wide">
             摄影集

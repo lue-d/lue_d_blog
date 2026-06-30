@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
+import { compressImage, formatSize } from "@/lib/compress-image";
 
 type ContentType = "calligraphy" | "photography" | "reflections";
 
@@ -60,6 +61,7 @@ export default function ContentForm({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [compressionNote, setCompressionNote] = useState("");
 
   const update = (key: keyof FormData, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -91,13 +93,24 @@ export default function ContentForm({
   const uploadCover = async (): Promise<string | null> => {
     if (!coverFile) return form.cover || null;
 
-    const ext = coverFile.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const filePath = `covers/${fileName}`;
+    // 客户端压缩：最长边 2000px，WebP 格式，质量 0.8
+    const result = await compressImage(coverFile);
+    if (result.compressed) {
+      const saved = Math.round(
+        (1 - result.compressedSize / result.originalSize) * 100
+      );
+      setCompressionNote(
+        `${formatSize(result.originalSize)} → ${formatSize(result.compressedSize)}，节省 ${saved}%`
+      );
+    } else {
+      setCompressionNote("");
+    }
+
+    const filePath = `covers/${Date.now()}-${Math.random().toString(36).slice(2)}-${result.fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(type)
-      .upload(filePath, coverFile);
+      .upload(filePath, result.blob);
 
     if (uploadError) {
       throw new Error(`图片上传失败: ${uploadError.message}`);
@@ -257,6 +270,16 @@ export default function ContentForm({
           {form.cover && !coverFile && (
             <p className="text-xs text-ink-muted truncate">
               当前: {form.cover}
+            </p>
+          )}
+          {coverFile && !loading && (
+            <p className="text-xs text-ink-accent">
+              💡 上传时将自动压缩（最长边 2000px，WebP）
+            </p>
+          )}
+          {compressionNote && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              ✅ {compressionNote}
             </p>
           )}
         </div>

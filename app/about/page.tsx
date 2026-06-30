@@ -5,7 +5,7 @@ export default function AboutPage() {
   return (
     <>
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto px-6 pt-16 pb-24">
+      <main className="flex-1 w-full max-w-3xl mx-auto px-6 pt-16 pb-24">
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-serif)] tracking-wide">
             关于我
@@ -14,7 +14,7 @@ export default function AboutPage() {
 
         <div className="prose">
           <p>
-            你好，欢迎来到墨韵。
+            你好，欢迎来到与墨言。
           </p>
           <p>
             这里是我的个人空间，记录书法、摄影和生活里零零散散的感悟。

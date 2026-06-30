@@ -31,7 +31,7 @@ export default function CalligraphyDetailClient({
   return (
     <>
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto px-6 pt-16 pb-24">
+      <main className="flex-1 w-full max-w-3xl mx-auto px-6 pt-16 pb-24">
         <Link
           href="/calligraphy"
           className="text-sm text-ink-muted hover:text-ink-accent transition-colors"

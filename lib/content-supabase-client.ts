@@ -18,6 +18,16 @@ export interface ContentMeta {
 
 type ContentType = "calligraphy" | "photography" | "reflections";
 
+/** 安全解码百分号编码的 slug（中文等非 ASCII 字符可能被浏览器编码） */
+function safeDecode(str: string): string {
+  try {
+    const decoded = decodeURIComponent(str);
+    return decoded !== str ? decoded : str;
+  } catch {
+    return str;
+  }
+}
+
 // 每张表的字段不同，只查询存在的列
 const LIST_COLUMNS: Record<ContentType, string> = {
   calligraphy: "slug, title, date, description, cover, category, year, medium",
@@ -65,10 +75,11 @@ export async function getContentDataClient(
   type: ContentType,
   slug: string
 ): Promise<{ meta: ContentMeta; html: string } | null> {
+  const decodedSlug = safeDecode(slug);
   const { data, error } = await supabase
     .from(type)
     .select("*")
-    .eq("slug", slug)
+    .eq("slug", decodedSlug)
     .eq("published", true)
     .single();
 

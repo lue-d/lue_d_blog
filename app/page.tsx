@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
+import DailyQuote from "@/components/DailyQuote";
 import Footer from "@/components/Footer";
 import { getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
 
@@ -33,12 +34,9 @@ export default function Home() {
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-6 pt-24 pb-16 md:pt-32 md:pb-24 text-center">
           <h1 className="text-4xl md:text-6xl font-bold font-[family-name:var(--font-serif)] tracking-wider mb-6">
-            墨韵
+            与墨言
           </h1>
-          <p className="text-lg md:text-xl text-ink-muted dark:text-ink-dark-muted max-w-lg mx-auto leading-relaxed">
-            用笔墨书写心境，用镜头捕捉光影，<br />
-            在流淌的时光里，记录每一次感悟。
-          </p>
+          <DailyQuote />
         </section>
 
         {loading ? (
