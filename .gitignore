@@ -40,3 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 out
+
+# playwright mcp
+.playwright-mcp/
+
+# temp root-level files
+/*.png
+/patch-url.js
