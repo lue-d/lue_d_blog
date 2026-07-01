@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Breadcrumb from "@/components/Breadcrumb";
 import { getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
 
 export default function PhotographyPage() {
@@ -22,6 +23,12 @@ export default function PhotographyPage() {
     <>
       <Header />
       <main className="flex-1 w-full max-w-5xl mx-auto px-6 pt-16 pb-24">
+        <Breadcrumb
+          items={[
+            { label: "首页", href: "/" },
+            { label: "摄影集" },
+          ]}
+        />
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-serif)] tracking-wide">
             摄影集

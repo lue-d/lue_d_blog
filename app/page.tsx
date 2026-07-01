@@ -48,8 +48,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 移动端：统计在下方 */}
-          <div className="md:hidden mt-8">
+          {/* 移动端：统计在下方，居中 */}
+          <div className="md:hidden mt-8 flex justify-center">
             <StatsBar />
           </div>
         </section>

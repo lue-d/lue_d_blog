@@ -6,6 +6,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CommentSection from "@/components/CommentSection";
+import Breadcrumb from "@/components/Breadcrumb";
 import { getContentDataClient, type ContentMeta } from "@/lib/content-supabase-client";
 
 export default function PhotographyDetailClient({
@@ -33,12 +34,13 @@ export default function PhotographyDetailClient({
     <>
       <Header />
       <main className="flex-1 w-full max-w-4xl mx-auto px-6 pt-16 pb-24">
-        <Link
-          href="/photography"
-          className="text-sm text-ink-muted hover:text-ink-accent transition-colors"
-        >
-          ← 返回摄影集
-        </Link>
+        <Breadcrumb
+          items={[
+            { label: "首页", href: "/" },
+            { label: "摄影集", href: "/photography" },
+            ...(data ? [{ label: data.meta.title }] : []),
+          ]}
+        />
 
         {loading ? (
           <article className="mt-8">

@@ -18,7 +18,7 @@ export default function DailyQuote() {
   const quote = quotes[index];
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg mx-auto text-center md:text-left">
       {/* 正文 */}
       <blockquote className="relative z-10">
         <p className="text-lg md:text-xl leading-relaxed text-ink-muted dark:text-ink-dark-muted font-[family-name:var(--font-serif)] tracking-wide">
