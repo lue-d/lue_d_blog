@@ -6,6 +6,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import DailyQuote from "@/components/DailyQuote";
 import Footer from "@/components/Footer";
+import StatsBar from "@/components/StatsBar";
 import { getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
 
 export default function Home() {
@@ -31,12 +32,26 @@ export default function Home() {
     <>
       <Header />
       <main className="flex-1">
-        {/* Hero */}
-        <section className="max-w-5xl mx-auto px-6 pt-24 pb-16 md:pt-32 md:pb-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold font-[family-name:var(--font-serif)] tracking-wider mb-6">
+        {/* Hero + 统计 */}
+        <section className="max-w-5xl mx-auto px-6 pt-24 pb-16 md:pt-32 md:pb-24">
+          <h1 className="text-4xl md:text-6xl font-bold font-[family-name:var(--font-serif)] tracking-wider mb-6 text-center">
             与墨言
           </h1>
-          <DailyQuote />
+
+          <div className="relative flex justify-center">
+            {/* 中间：每日正能量 */}
+            <DailyQuote />
+
+            {/* 右侧：统计（与正能量对齐） */}
+            <div className="hidden md:block absolute right-0 top-0">
+              <StatsBar />
+            </div>
+          </div>
+
+          {/* 移动端：统计在下方 */}
+          <div className="md:hidden mt-8">
+            <StatsBar />
+          </div>
         </section>
 
         {loading ? (

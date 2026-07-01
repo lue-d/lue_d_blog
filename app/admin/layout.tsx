@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin/calligraphy", label: "书法" },
   { href: "/admin/photography", label: "摄影" },
   { href: "/admin/reflections", label: "感悟" },
+  { href: "/admin/comments", label: "留言" },
 ];
 
 export default function AdminLayout({

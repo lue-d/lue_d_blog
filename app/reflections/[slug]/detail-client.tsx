@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CommentSection from "@/components/CommentSection";
 import { getContentDataClient, type ContentMeta } from "@/lib/content-supabase-client";
 
 export default function ReflectionDetailClient({
@@ -98,6 +99,14 @@ export default function ReflectionDetailClient({
             <div className="prose" dangerouslySetInnerHTML={{ __html: data.html }} />
           </article>
         ) : null}
+
+        {data && (
+          <CommentSection
+            postType="reflections"
+            postSlug={slug}
+            postTitle={data.meta.title}
+          />
+        )}
       </main>
       <Footer />
     </>
