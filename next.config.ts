@@ -5,7 +5,9 @@ import createMDX from "@next/mdx";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  // 开发模式下关闭静态导出，避免 generateStaticParams 缓存导致动态路由失败
+  // 生产构建时正常导出静态站点
+  output: process.env.NODE_ENV === "production" ? "export" : undefined,
   basePath,
   trailingSlash: true,
   pageExtensions: ["ts", "tsx", "md", "mdx"],
