@@ -1,0 +1,7 @@
+1:"$Sreact.fragment"
+2:I[91556,["/lue_d_blog/_next/static/chunks/05-c3ty_6dwfk.js","/lue_d_blog/_next/static/chunks/2im7c515bo69p.js","/lue_d_blog/_next/static/chunks/33n_tv2hld_42.js","/lue_d_blog/_next/static/chunks/2cxvsob_ow9x1.js","/lue_d_blog/_next/static/chunks/2h5bo2d3xskvl.js","/lue_d_blog/_next/static/chunks/40ntxrnth3vb4.js"],"default"]
+4:I[97367,["/lue_d_blog/_next/static/chunks/05-c3ty_6dwfk.js","/lue_d_blog/_next/static/chunks/2im7c515bo69p.js"],"OutletBoundary"]
+5:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"params":"$@3"}],[["$","script","script-0",{"src":"/lue_d_blog/_next/static/chunks/33n_tv2hld_42.js","async":true}],["$","script","script-1",{"src":"/lue_d_blog/_next/static/chunks/2cxvsob_ow9x1.js","async":true}],["$","script","script-2",{"src":"/lue_d_blog/_next/static/chunks/2h5bo2d3xskvl.js","async":true}],["$","script","script-3",{"src":"/lue_d_blog/_next/static/chunks/40ntxrnth3vb4.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"OMhP4txMnTVcflXNDOVdb"}
+3:{"slug":"%E5%A4%9A%E6%AC%A1%E8%B0%83%E6%9F%A5"}
+6:null
