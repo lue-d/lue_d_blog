@@ -9,6 +9,7 @@ export interface ContentMeta {
   date: string;
   description: string;
   cover?: string;
+  gallery_thumbnail?: string; // 首张画廊图，列表页缩略图回退
   category?: string;
   year?: string;
   medium?: string;
@@ -46,14 +47,14 @@ export async function getContentListClient(
     .from(type)
     .select(LIST_COLUMNS[type])
     .eq("published", true)
-    .order("date", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error(`[content-supabase-client] 获取 ${type} 列表失败:`, error.message);
     return [];
   }
 
-  return ((data || []) as unknown as Record<string, unknown>[]).map((item) => ({
+  const items = ((data || []) as unknown as Record<string, unknown>[]).map((item) => ({
     slug: item.slug as string,
     title: item.title as string,
     date: item.date ? String(item.date) : "",
@@ -65,6 +66,31 @@ export async function getContentListClient(
     camera: (item.camera as string) || undefined,
     location: (item.location as string) || undefined,
   }));
+
+  // 批量获取画廊首图作为缩略图
+  const slugs = items.map((item) => item.slug);
+  if (slugs.length > 0) {
+    const { data: imgData } = await supabase
+      .from("images")
+      .select("post_slug, url")
+      .eq("post_type", type)
+      .in("post_slug", slugs)
+      .order("sort_order", { ascending: true });
+
+    const seen = new Set<string>();
+    for (const row of imgData || []) {
+      const r = row as { post_slug: string; url: string };
+      if (!seen.has(r.post_slug)) {
+        seen.add(r.post_slug);
+        const item = items.find((i) => i.slug === r.post_slug);
+        if (item) {
+          (item as Record<string, unknown>).gallery_thumbnail = r.url;
+        }
+      }
+    }
+  }
+
+  return items;
 }
 
 /**

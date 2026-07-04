@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import DailyQuote from "@/components/DailyQuote";
 import Footer from "@/components/Footer";
 import StatsBar from "@/components/StatsBar";
+import ScrollReveal from "@/components/ScrollReveal";
 import { getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
 
 export default function Home() {
@@ -64,51 +65,57 @@ export default function Home() {
           <>
             {/* 书法精选 */}
             {calligraphies.length > 0 && (
-              <Section title="书法精选" href="/calligraphy">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {calligraphies.map((item) => (
-                    <Card key={item.slug} item={item} href={`/calligraphy/${item.slug}`} />
-                  ))}
-                </div>
-              </Section>
+              <ScrollReveal>
+                <Section title="书法精选" href="/calligraphy">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {calligraphies.map((item) => (
+                      <Card key={item.slug} item={item} href={`/calligraphy/${item.slug}`} />
+                    ))}
+                  </div>
+                </Section>
+              </ScrollReveal>
             )}
 
             {/* 摄影精选 */}
             {photos.length > 0 && (
-              <Section title="摄影精选" href="/photography">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {photos.map((item) => (
-                    <Card key={item.slug} item={item} href={`/photography/${item.slug}`} />
-                  ))}
-                </div>
-              </Section>
+              <ScrollReveal delay={0.1}>
+                <Section title="摄影精选" href="/photography">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {photos.map((item) => (
+                      <Card key={item.slug} item={item} href={`/photography/${item.slug}`} />
+                    ))}
+                  </div>
+                </Section>
+              </ScrollReveal>
             )}
 
             {/* 最新感悟 */}
             {reflections.length > 0 && (
-              <Section title="最新感悟" href="/reflections">
-                <div className="space-y-6 max-w-2xl mx-auto">
-                  {reflections.map((item) => (
-                    <Link
-                      key={item.slug}
-                      href={`/reflections/${item.slug}`}
-                      className="block group"
-                    >
-                      <article className="py-4 border-b border-ink-border dark:border-ink-dark-muted/20 last:border-0">
-                        <time className="text-xs text-ink-muted dark:text-ink-dark-muted">
-                          {item.date}
-                        </time>
-                        <h3 className="text-lg font-semibold mt-1 group-hover:text-ink-accent transition-colors font-[family-name:var(--font-serif)]">
-                          {item.title}
-                        </h3>
-                        <p className="text-sm text-ink-muted dark:text-ink-dark-muted mt-1 line-clamp-2">
-                          {item.description}
-                        </p>
-                      </article>
-                    </Link>
-                  ))}
-                </div>
-              </Section>
+              <ScrollReveal delay={0.2}>
+                <Section title="最新感悟" href="/reflections">
+                  <div className="space-y-6 max-w-2xl mx-auto">
+                    {reflections.map((item) => (
+                      <Link
+                        key={item.slug}
+                        href={`/reflections/${item.slug}`}
+                        className="block group"
+                      >
+                        <article className="py-4 border-b border-ink-border dark:border-ink-dark-muted/20 last:border-0">
+                          <time className="text-xs text-ink-muted dark:text-ink-dark-muted">
+                            {item.date}
+                          </time>
+                          <h3 className="text-lg font-semibold mt-1 group-hover:text-ink-accent transition-colors font-[family-name:var(--font-serif)]">
+                            {item.title}
+                          </h3>
+                          <p className="text-sm text-ink-muted dark:text-ink-dark-muted mt-1 line-clamp-2">
+                            {item.description}
+                          </p>
+                        </article>
+                      </Link>
+                    ))}
+                  </div>
+                </Section>
+              </ScrollReveal>
             )}
 
             {/* 空状态 */}
@@ -168,7 +175,7 @@ function Card({
 }) {
   return (
     <Link href={href} className="group block">
-      <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-ink-border/30 mb-3">
+      <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-ink-border/30 mb-3 shadow-card group-hover:shadow-card-hover transition-shadow duration-500">
         {item.cover ? (
           <Image
             src={item.cover}

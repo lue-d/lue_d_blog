@@ -56,6 +56,8 @@ export default function AdminEditClient({
   const ct = type as ContentType;
   const label = TYPE_LABEL[ct];
 
+  const [galleryImages, setGalleryImages] = useState<import("@/lib/gallery").GalleryImage[]>([]);
+
   useEffect(() => {
     async function fetchItem() {
       const { supabase } = await import("@/lib/supabase");
@@ -69,6 +71,12 @@ export default function AdminEditClient({
         setError("未找到该记录");
       } else {
         setData(item);
+
+        // 加载已有画廊图
+        const slug = item.slug as string;
+        const { getGalleryImagesClient } = await import("@/lib/gallery-client");
+        const images = await getGalleryImagesClient(ct, slug);
+        setGalleryImages(images);
       }
       setLoading(false);
     }
@@ -127,7 +135,7 @@ export default function AdminEditClient({
       </h1>
       <p className="text-sm text-ink-muted mb-8">/{data.slug as string}</p>
 
-      <ContentForm type={ct} mode="edit" initialData={initialData} />
+      <ContentForm type={ct} mode="edit" initialData={initialData} existingGalleryImages={galleryImages} />
     </div>
   );
 }

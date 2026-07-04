@@ -65,10 +65,10 @@ export default function PhotographyPage() {
                 href={`/photography/${item.slug}`}
                 className="group block break-inside-avoid"
               >
-                <div className="relative rounded-lg overflow-hidden bg-ink-border/30">
-                  {item.cover ? (
+                <div className="relative rounded-lg overflow-hidden bg-ink-border/30 shadow-card group-hover:shadow-card-hover transition-shadow duration-500">
+                  {item.gallery_thumbnail ?? item.cover ? (
                     <Image
-                      src={item.cover}
+                      src={(item.gallery_thumbnail ?? item.cover)!}
                       alt={item.title}
                       width={600}
                       height={400}

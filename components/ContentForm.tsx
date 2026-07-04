@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { compressImage, formatSize } from "@/lib/compress-image";
+import GalleryUploader, { type GalleryUploaderHandle, type GalleryImage } from "./GalleryUploader";
 
 type ContentType = "calligraphy" | "photography" | "reflections";
 
@@ -48,20 +49,25 @@ export default function ContentForm({
   type,
   initialData,
   mode,
+  existingGalleryImages = [],
 }: {
   type: ContentType;
   initialData?: Partial<FormData> & { id?: string };
   mode: "create" | "edit";
+  existingGalleryImages?: GalleryImage[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM, ...initialData });
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const coverFileRef = useRef<File | null>(null);
+  const coverExplicitlySet = useRef(!!initialData?.cover);
   const [coverPreview, setCoverPreview] = useState<string | null>(
     initialData?.cover || null
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [compressionNote, setCompressionNote] = useState("");
+  const galleryRef = useRef<GalleryUploaderHandle>(null);
 
   const update = (key: keyof FormData, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -73,10 +79,11 @@ export default function ContentForm({
       // 新建模式下自动生成 slug
       if (mode === "create") {
         const slug = title
-          .replace(/[^\w一-鿿]/g, "-")
+          .replace(/[^\w]/g, "-")
           .replace(/-+/g, "-")
           .replace(/^-|-$/g, "")
-          .toLowerCase();
+          .toLowerCase()
+          || `post-${Date.now().toString(36)}`;
         update("slug", slug);
       }
     },
@@ -86,15 +93,16 @@ export default function ContentForm({
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    coverExplicitlySet.current = true;
+    coverFileRef.current = file;
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
   };
 
-  const uploadCover = async (): Promise<string | null> => {
-    if (!coverFile) return form.cover || null;
+  const uploadCover = async (file: File): Promise<string | null> => {
 
     // 客户端压缩：最长边 2000px，WebP 格式，质量 0.8
-    const result = await compressImage(coverFile);
+    const result = await compressImage(file);
     if (result.compressed) {
       const saved = Math.round(
         (1 - result.compressedSize / result.originalSize) * 100
@@ -106,7 +114,10 @@ export default function ContentForm({
       setCompressionNote("");
     }
 
-    const filePath = `covers/${Date.now()}-${Math.random().toString(36).slice(2)}-${result.fileName}`;
+    // 文件名可能含中文等非 ASCII 字符，生成安全文件名
+    const ext = result.fileName.split(".").pop() || "webp";
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const filePath = `covers/${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(type)
@@ -129,10 +140,23 @@ export default function ContentForm({
     setLoading(true);
 
     try {
+      // 如果未显式选择封面，默认使用第一张作品图片作为封面
+      let finalCoverFile = coverFileRef.current;
+      if (!finalCoverFile && !form.cover && !coverExplicitlySet.current) {
+        const firstPending = galleryRef.current?.getFirstPendingFile();
+        if (firstPending) {
+          finalCoverFile = firstPending.file;
+          // 同步更新 UI 状态
+          coverFileRef.current = firstPending.file;
+          setCoverFile(firstPending.file);
+          setCoverPreview(firstPending.preview);
+        }
+      }
+
       // 上传封面图
       let coverUrl = form.cover;
-      if (coverFile) {
-        coverUrl = (await uploadCover()) || "";
+      if (finalCoverFile) {
+        coverUrl = (await uploadCover(finalCoverFile)) || "";
       }
 
       const payload = {
@@ -158,12 +182,32 @@ export default function ContentForm({
           .from(type)
           .insert(payload);
         if (insertError) throw new Error(insertError.message);
+
+        // Upload gallery images after content is saved (slug exists)
+        if (galleryRef.current) {
+          const galleryResult = await galleryRef.current.uploadAll(form.slug);
+          if (!galleryResult.success) {
+            setError(galleryResult.error || "画廊图片上传失败");
+            setLoading(false);
+            return;
+          }
+        }
       } else {
         const { error: updateError } = await supabase
           .from(type)
           .update(payload)
           .eq("id", initialData?.id);
         if (updateError) throw new Error(updateError.message);
+
+        // Sync gallery changes
+        if (galleryRef.current) {
+          const galleryResult = await galleryRef.current.syncChanges(form.slug);
+          if (!galleryResult.success) {
+            setError(galleryResult.error || "画廊图片同步失败");
+            setLoading(false);
+            return;
+          }
+        }
       }
 
       router.push(`/admin/${type}`);
@@ -284,6 +328,13 @@ export default function ContentForm({
           )}
         </div>
       </Field>
+
+      {/* 画廊图片（多图上传 & 拖拽排序） */}
+      <GalleryUploader
+        ref={galleryRef}
+        postType={type}
+        existingImages={existingGalleryImages}
+      />
 
       {/* 类型特有字段 */}
       {type === "calligraphy" && (

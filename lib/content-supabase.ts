@@ -1,6 +1,7 @@
 import { remark } from "remark";
 import html from "remark-html";
 import { supabaseAdmin } from "./supabase-admin";
+import { getFirstGalleryImages } from "./gallery";
 import * as localContent from "./content";
 
 // 与 lib/content.ts 保持一致的接口
@@ -11,6 +12,7 @@ export interface ContentMeta {
   date: string;
   description: string;
   cover?: string;
+  gallery_thumbnail?: string; // 首张画廊图，列表页缩略图回退
   category?: string;
   year?: string;
   medium?: string;
@@ -53,7 +55,7 @@ export async function getContentList(
       .from(type)
       .select(LIST_COLUMNS[type])
       .eq("published", true)
-      .order("date", { ascending: false });
+      .order("created_at", { ascending: false });
     data = (result.data || []) as unknown[] | null;
     error = result.error;
   } catch (e) {
@@ -80,6 +82,16 @@ export async function getContentList(
     camera: (item.camera as string) || undefined,
     location: (item.location as string) || undefined,
   }));
+
+  // 批量获取画廊首图作为缩略图
+  const slugs = items.map((item) => item.slug);
+  const thumbnails = await getFirstGalleryImages(type, slugs);
+  for (const item of items) {
+    const thumb = thumbnails.get(item.slug);
+    if (thumb) {
+      (item as Record<string, unknown>).gallery_thumbnail = thumb;
+    }
+  }
 
   // 当 Supabase 返回空数组时，回退到本地 MDX 文件
   // 确保 output: "export" 模式下 generateStaticParams() 至少有一个路径

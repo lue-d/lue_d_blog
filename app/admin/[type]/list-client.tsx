@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
+import { deleteAllGalleryImages } from "@/lib/gallery-client";
 import type { ContentMeta } from "@/lib/content-supabase";
 
 type ContentType = "calligraphy" | "photography" | "reflections";
@@ -23,6 +24,7 @@ export default function AdminListClient({
 }) {
   const { type } = use(params);
   const [items, setItems] = useState<(ContentMeta & { id: string; published: boolean })[]>([]);
+  const [galleryCounts, setGalleryCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -49,15 +51,36 @@ export default function AdminListClient({
 
       if (!error && data) {
         setItems(data as (ContentMeta & { id: string; published: boolean })[]);
+
+        // 批量查询画廊图数量
+        const slugs = (data as { slug: string }[]).map((d) => d.slug);
+        if (slugs.length > 0) {
+          const { data: countData } = await supabase
+            .from("images")
+            .select("post_slug")
+            .eq("post_type", ct)
+            .in("post_slug", slugs);
+
+          const counts: Record<string, number> = {};
+          for (const row of countData || []) {
+            const r = row as { post_slug: string };
+            counts[r.post_slug] = (counts[r.post_slug] || 0) + 1;
+          }
+          setGalleryCounts(counts);
+        }
       }
       setLoading(false);
     }
     fetchItems();
   }, [ct]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, slug: string) => {
     if (!confirm("确定删除？此操作不可撤销。")) return;
     setDeleting(id);
+
+    // 清理画廊图片记录
+    await deleteAllGalleryImages(ct, slug);
+
     const { error } = await supabase.from(ct).delete().eq("id", id);
     if (!error) {
       setItems((prev) => prev.filter((item) => item.id !== id));
@@ -99,6 +122,7 @@ export default function AdminListClient({
                 <th className="py-3 pr-4 font-medium text-ink-muted">标题</th>
                 <th className="py-3 pr-4 font-medium text-ink-muted">日期</th>
                 <th className="py-3 pr-4 font-medium text-ink-muted">状态</th>
+                <th className="py-3 pr-4 font-medium text-ink-muted w-16">图片</th>
                 <th className="py-3 pr-4 font-medium text-ink-muted w-24">操作</th>
               </tr>
             </thead>
@@ -146,6 +170,15 @@ export default function AdminListClient({
                       {item.published ? "已发布" : "草稿"}
                     </span>
                   </td>
+                  <td className="py-3 pr-4 text-xs text-ink-muted">
+                    {galleryCounts[item.slug] ? (
+                      <span className="text-ink-accent font-medium">
+                        {galleryCounts[item.slug]}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
                       <Link
@@ -155,7 +188,7 @@ export default function AdminListClient({
                         编辑
                       </Link>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item.id, item.slug)}
                         disabled={deleting === item.id}
                         className="text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
                       >

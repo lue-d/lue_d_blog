@@ -10,6 +10,7 @@ export interface ContentMeta {
   date: string;
   description: string;
   cover?: string;
+  gallery_thumbnail?: string; // 首张画廊图，列表页缩略图回退
   category?: string;
   year?: string;
   medium?: string;

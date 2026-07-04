@@ -71,10 +71,10 @@ export default function ReflectionsPage() {
                 className="block group py-6 border-b border-ink-border dark:border-ink-dark-muted/20 last:border-0"
               >
                 <article className="flex gap-6">
-                  {item.cover && (
+                  {(item.gallery_thumbnail ?? item.cover) && (
                     <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-ink-border/30">
                       <Image
-                        src={item.cover}
+                        src={(item.gallery_thumbnail ?? item.cover)!}
                         alt={item.title}
                         fill
                         unoptimized

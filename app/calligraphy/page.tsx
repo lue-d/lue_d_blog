@@ -58,10 +58,10 @@ export default function CalligraphyPage() {
                 href={`/calligraphy/${item.slug}`}
                 className="group block"
               >
-                <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-ink-border/30 mb-3">
-                  {item.cover ? (
+                <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-ink-border/30 mb-3 shadow-card group-hover:shadow-card-hover transition-shadow duration-500">
+                  {item.gallery_thumbnail ?? item.cover ? (
                     <Image
-                      src={item.cover}
+                      src={(item.gallery_thumbnail ?? item.cover)!}
                       alt={item.title}
                       fill
                       unoptimized

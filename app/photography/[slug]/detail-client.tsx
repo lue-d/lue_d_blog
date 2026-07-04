@@ -7,7 +7,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CommentSection from "@/components/CommentSection";
 import Breadcrumb from "@/components/Breadcrumb";
-import { getContentDataClient, type ContentMeta } from "@/lib/content-supabase-client";
+import Carousel from "@/components/Carousel";
+import Lightbox from "@/components/Lightbox";
+import RelatedPosts from "@/components/RelatedPosts";
+import { getContentDataClient, getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
+import { getGalleryImagesClient } from "@/lib/gallery-client";
+import type { GalleryImage } from "@/lib/gallery";
 
 export default function PhotographyDetailClient({
   params,
@@ -18,15 +23,38 @@ export default function PhotographyDetailClient({
   const [data, setData] = useState<{ meta: ContentMeta; html: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [relatedPosts, setRelatedPosts] = useState<ContentMeta[]>([]);
 
   useEffect(() => {
-    getContentDataClient("photography", slug).then((result) => {
+    Promise.all([
+      getContentDataClient("photography", slug),
+      getGalleryImagesClient("photography", slug),
+    ]).then(([result, images]) => {
       if (!result) {
         setNotFound(true);
       } else {
         setData(result);
       }
+      setGalleryImages(images);
       setLoading(false);
+      // 获取相关推荐
+      getContentListClient("photography").then((all) => {
+        const sameCategory = all.filter(
+          (item) =>
+            item.slug !== slug &&
+            result?.meta.category &&
+            item.category === result.meta.category
+        );
+        const others = all.filter(
+          (item) =>
+            item.slug !== slug &&
+            (!result?.meta.category || item.category !== result.meta.category)
+        );
+        setRelatedPosts([...sameCategory, ...others].slice(0, 3));
+      });
     });
   }, [slug]);
 
@@ -70,7 +98,19 @@ export default function PhotographyDetailClient({
           </div>
         ) : data ? (
           <article className="mt-8">
-            {data.meta.cover && (
+            {/* 走马灯展示作品图片，无作品图片时回退到封面 */}
+            {galleryImages.length > 0 ? (
+              <div className="mb-8">
+                <Carousel
+                  images={galleryImages}
+                  aspectRatio="3/2"
+                  onImageClick={(idx) => {
+                    setLightboxIndex(idx);
+                    setLightboxOpen(true);
+                  }}
+                />
+              </div>
+            ) : data.meta.cover ? (
               <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-ink-border/30 mb-8">
                 <Image
                   src={data.meta.cover}
@@ -82,7 +122,7 @@ export default function PhotographyDetailClient({
                   priority
                 />
               </div>
-            )}
+            ) : null}
 
             <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-serif)] tracking-wide mb-4">
               {data.meta.title}
@@ -98,6 +138,13 @@ export default function PhotographyDetailClient({
           </article>
         ) : null}
 
+        {data && relatedPosts.length > 0 && (
+          <RelatedPosts
+            posts={relatedPosts}
+            basePath="/photography"
+          />
+        )}
+
         {data && (
           <CommentSection
             postType="photography"
@@ -107,6 +154,13 @@ export default function PhotographyDetailClient({
         )}
       </main>
       <Footer />
+
+      <Lightbox
+        images={galleryImages}
+        currentIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </>
   );
 }
