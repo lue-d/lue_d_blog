@@ -162,29 +162,34 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
           );
         }
 
-        // 移除所有非 ASCII 字符，确保 Supabase Storage 路径合法
-        const safeSlug = slug
-          .replace(/[^\w-]/g, "")
-          .replace(/-+/g, "-")
-          .replace(/^-|-$/g, "")
-          || `post-${Date.now().toString(36)}`;
-        const ext = result.fileName.split(".").pop() || "webp";
-        const safeName = `${sortOrder}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const filePath = `gallery/${safeSlug}/${safeName}`;
-        const { error: uploadError } = await supabase.storage
-          .from(postType)
-          .upload(filePath, result.blob);
+        // 通过 Edge Function 代理上传到腾讯云 COS
+        const { data: { session } } = await supabase.auth.getSession();
+        const form = new FormData();
+        form.append("file", result.blob, result.fileName);
+        form.append("slug", slug);
+        form.append("type", postType);
+        form.append("index", String(sortOrder));
 
-        if (uploadError) throw new Error(`上传失败: ${uploadError.message}`);
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const uploadRes = await fetch(`${supabaseUrl}/functions/v1/cos-upload`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: form,
+        });
 
-        const { data: urlData } = supabase.storage
-          .from(postType)
-          .getPublicUrl(filePath);
+        if (!uploadRes.ok) {
+          const errBody = await uploadRes.json().catch(() => ({}));
+          throw new Error((errBody as { error?: string }).error || `上传失败 (${uploadRes.status})`);
+        }
+
+        const { url } = await uploadRes.json() as { url: string };
 
         const record = await createGalleryImage({
           post_type: postType,
           post_slug: slug,
-          url: urlData.publicUrl,
+          url,
           sort_order: sortOrder,
         });
 

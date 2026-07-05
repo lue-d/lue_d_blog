@@ -47,3 +47,4 @@ out
 # temp root-level files
 /*.png
 /patch-url.js
+supabase/.temp/
