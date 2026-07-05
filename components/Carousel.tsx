@@ -135,9 +135,9 @@ export default function Carousel({
               <button
                 key={idx}
                 onClick={(e) => { e.stopPropagation(); goTo(idx); }}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                className={`rounded-full transition-all duration-300 w-2.5 h-2.5 sm:w-2 sm:h-2 ${
                   idx === current
-                    ? "bg-white w-6"
+                    ? "bg-white w-6 sm:w-6"
                     : "bg-white/50 hover:bg-white/80"
                 }`}
                 aria-label={`第 ${idx + 1} 张`}
