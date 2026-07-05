@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"];
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_SIZE = 10 * 1024 * 1024;
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -12,68 +12,23 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
-// ======== COS REST API 签名（纯 Web Crypto，无需 SDK）========
-
-async function hmacSha1(key: ArrayBuffer, data: string): Promise<ArrayBuffer> {
+// HMAC-SHA1: key 和 data 都是字符串（与 Node.js crypto.createHmac 行为一致）
+async function hmacSha1(key: string, data: string): Promise<string> {
+  const keyBytes = new TextEncoder().encode(key);
+  const dataBytes = new TextEncoder().encode(data);
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", key, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+    "raw", keyBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
   );
-  return crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data));
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, dataBytes);
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function sha1(data: ArrayBuffer): Promise<string> {
-  const hash = await crypto.subtle.digest("SHA-1", data);
+// SHA1 哈希
+async function sha1(data: string): Promise<string> {
+  const bytes = new TextEncoder().encode(data);
+  const hash = await crypto.subtle.digest("SHA-1", bytes);
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
-
-function hex(arr: ArrayBuffer): string {
-  return Array.from(new Uint8Array(arr)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-/** 生成 COS 签名并上传文件 */
-async function putObject(
-  bucket: string, region: string, key: string, body: Uint8Array,
-  contentType: string, secretId: string, secretKey: string
-): Promise<Response> {
-  const host = `${bucket}.cos.${region}.myqcloud.com`;
-  const url = `https://${host}/${encodeURI(key).replace(/%2F/g, "/")}`;
-  const method = "PUT";
-
-  const now = Math.floor(Date.now() / 1000);
-  const signTime = `${now};${now + 3600}`;
-  const keyTime = signTime;
-
-  const httpHeaders: Record<string, string> = {
-    "Content-Type": contentType,
-    "Host": host,
-  };
-  const headerList = "content-type;host";
-  const urlParamList = "";
-
-  const headersStr = headerList.split(";").map(k => `${k}=${encodeURIComponent(httpHeaders[k])}`).join("&");
-
-  const httpString = `${method.toLowerCase()}\n/${key}\n\n${headersStr}\n`;
-
-  const httpStringHash = await sha1(new TextEncoder().encode(httpString));
-  const signString = `sha1\n${signTime}\n${httpStringHash}\n`;
-
-  const signKey = await hmacSha1(new TextEncoder().encode(secretKey), keyTime);
-  const signature = hex(await hmacSha1(signKey, signString));
-
-  const auth = `q-sign-algorithm=sha1&q-ak=${secretId}&q-sign-time=${signTime}&q-key-time=${keyTime}&q-header-list=${headerList}&q-url-param-list=${urlParamList}&q-signature=${signature}`;
-
-  return fetch(url, {
-    method: "PUT",
-    headers: {
-      "Authorization": auth,
-      "Content-Type": contentType,
-      "Host": host,
-    },
-    body,
-  });
-}
-
-// ======== Handler ========
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -91,7 +46,7 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  // 验证管理员
+  // 验证用户身份
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "未登录" }), { status: 401, headers: corsHeaders() });
@@ -108,50 +63,71 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "登录已过期" }), { status: 401, headers: corsHeaders() });
   }
 
-  // 解析表单
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  const type = formData.get("type") as string | null;
-  const slug = formData.get("slug") as string | null;
-  const index = formData.get("index") as string | null;
+  // 解析请求参数
+  const body = await req.json();
+  const { filename, contentType, slug, type, index } = body as {
+    filename: string; contentType: string; slug: string; type: string; index: string;
+  };
 
-  if (!file || !type || !slug || !index) {
+  if (!filename || !contentType || !slug || !type || !index) {
     return new Response(JSON.stringify({ error: "缺少参数" }), { status: 400, headers: corsHeaders() });
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  if (!ALLOWED_TYPES.includes(contentType)) {
     return new Response(JSON.stringify({ error: "不支持的图片格式" }), { status: 400, headers: corsHeaders() });
   }
 
-  if (file.size > MAX_SIZE) {
-    return new Response(JSON.stringify({ error: "图片超过 10MB 限制" }), { status: 400, headers: corsHeaders() });
-  }
-
-  const safeSlug = slug.replace(/[^a-zA-Z0-9一-鿿_-]/g, "").slice(0, 100);
+  const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 100) || "post";
   const safeType = ["calligraphy", "photography", "reflections"].includes(type) ? type : "photography";
-  const ext = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "webp";
+  const ext = filename.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "webp";
   const key = `gallery/${safeType}/${safeSlug}/${index}-${Date.now()}.${ext}`;
 
   const bucket = Deno.env.get("COS_BUCKET")!;
   const region = Deno.env.get("COS_REGION")!;
   const secretId = Deno.env.get("COS_SECRET_ID")!;
   const secretKey = Deno.env.get("COS_SECRET_KEY")!;
+  const host = `${bucket}.cos.${region}.myqcloud.com`;
 
-  const buffer = new Uint8Array(await file.arrayBuffer());
+  const uri = `/${key}`;
 
-  try {
-    const res = await putObject(bucket, region, key, buffer, file.type, secretId, secretKey);
+  // 生成预签名 URL（签名放在 query string，浏览器直传 COS）
+  const now = Math.floor(Date.now() / 1000) - 1;
+  const exp = now + 900;
+  const signTime = `${now};${exp}`;
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error("COS PUT failed:", res.status, errBody);
-      return new Response(JSON.stringify({ error: `COS 上传失败 (${res.status})` }), { status: 500, headers: corsHeaders() });
-    }
+  // 签名 content-type 头，确保请求必须携带正确的 Content-Type
+  const headerList = "content-type";
+  const headerStr = `content-type=${encodeURIComponent(contentType.toLowerCase())}`;
 
-    const url = `https://${bucket}.cos.${region}.myqcloud.com/${key}`;
-    return new Response(JSON.stringify({ url }), { status: 200, headers: corsHeaders() });
-  } catch (err) {
-    console.error("Upload error:", err);
-    return new Response(JSON.stringify({ error: "上传失败" }), { status: 500, headers: corsHeaders() });
-  }
+  // SignKey
+  const signKey = await hmacSha1(secretKey, signTime);
+
+  // FormatString
+  const formatString = ["put", uri, "", headerStr, ""].join("\n");
+
+  // StringToSign
+  const formatSha1 = await sha1(formatString);
+  const stringToSign = ["sha1", signTime, formatSha1, ""].join("\n");
+
+  // Signature
+  const signature = await hmacSha1(signKey, stringToSign);
+
+  // 组装签名 query 参数
+  const authParams = [
+    "q-sign-algorithm=sha1",
+    `q-ak=${secretId}`,
+    `q-sign-time=${signTime}`,
+    `q-key-time=${signTime}`,
+    `q-header-list=${headerList}`,
+    "q-url-param-list=",
+    `q-signature=${signature}`,
+  ].join("&");
+
+  const presignedUrl = `https://${host}${uri}?${authParams}`;
+  const publicUrl = `https://${host}${uri}`;
+
+  return new Response(JSON.stringify({ presignedUrl, publicUrl }), {
+    status: 200,
+    headers: corsHeaders(),
+  });
 });

@@ -162,29 +162,45 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
           );
         }
 
-        // 通过 Edge Function 代理上传到腾讯云 COS
+        // 步骤 1：从 Edge Function 获取 COS 预签名 URL
         const { data: { session } } = await supabase.auth.getSession();
-        const form = new FormData();
-        form.append("file", result.blob, result.fileName);
-        form.append("slug", slug);
-        form.append("type", postType);
-        form.append("index", String(sortOrder));
+        if (!session?.access_token) throw new Error("登录已过期");
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const uploadRes = await fetch(`${supabaseUrl}/functions/v1/cos-upload`, {
+        const presignRes = await fetch(`${supabaseUrl}/functions/v1/cos-upload`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${session?.access_token}`,
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
           },
-          body: form,
+          body: JSON.stringify({
+            filename: result.fileName,
+            contentType: result.blob.type,
+            slug,
+            type: postType,
+            index: String(sortOrder),
+          }),
+        });
+
+        if (!presignRes.ok) {
+          const errBody = await presignRes.json().catch(() => ({}));
+          throw new Error((errBody as { error?: string }).error || `获取上传地址失败 (${presignRes.status})`);
+        }
+
+        const { presignedUrl, publicUrl } = await presignRes.json() as { presignedUrl: string; publicUrl: string };
+
+        // 步骤 2：直传 COS（浏览器 → COS，不经 Edge Function 中转）
+        const uploadRes = await fetch(presignedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": result.blob.type },
+          body: result.blob,
         });
 
         if (!uploadRes.ok) {
-          const errBody = await uploadRes.json().catch(() => ({}));
-          throw new Error((errBody as { error?: string }).error || `上传失败 (${uploadRes.status})`);
+          throw new Error(`COS 上传失败 (${uploadRes.status})`);
         }
 
-        const { url } = await uploadRes.json() as { url: string };
+        const url = publicUrl;
 
         const record = await createGalleryImage({
           post_type: postType,
