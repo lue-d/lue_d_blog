@@ -165,13 +165,20 @@ export default function AdminDashboard() {
           onClick={async () => {
             setDeploying(true);
             setDeployMsg("");
-            const token = prompt(
-              "请输入 GitHub Personal Access Token（首次使用）：\n\n创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 选择仓库 + Workflows 权限"
-            );
+
+            const STORAGE_KEY = "gh_deploy_token";
+            let token = localStorage.getItem(STORAGE_KEY);
+
             if (!token) {
-              setDeploying(false);
-              return;
+              token = prompt(
+                "请输入 GitHub Personal Access Token（仅需一次，后续自动保存）：\n\n创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 选择仓库 + Workflows 权限"
+              );
+              if (!token) {
+                setDeploying(false);
+                return;
+              }
             }
+
             try {
               const res = await fetch(
                 `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/deploy.yml/dispatches`,
@@ -185,7 +192,11 @@ export default function AdminDashboard() {
                 }
               );
               if (res.ok) {
+                localStorage.setItem(STORAGE_KEY, token);
                 setDeployMsg("已触发部署，约 1-2 分钟后生效");
+              } else if (res.status === 401 || res.status === 403) {
+                localStorage.removeItem(STORAGE_KEY);
+                setDeployMsg("Token 已失效，请重新点击发布");
               } else {
                 setDeployMsg(`触发失败 (${res.status})，请检查 Token 权限`);
               }
