@@ -163,31 +163,24 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
         }
 
         // 步骤 1：从 Edge Function 获取 COS 预签名 URL
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error("登录已过期");
-
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const presignRes = await fetch(`${supabaseUrl}/functions/v1/cos-upload`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        const { data: presignData, error: presignErr } = await supabase.functions.invoke<{
+          presignedUrl: string;
+          publicUrl: string;
+        }>("cos-upload", {
+          body: {
             filename: result.fileName,
             contentType: result.blob.type,
             slug,
             type: postType,
             index: String(sortOrder),
-          }),
+          },
         });
 
-        if (!presignRes.ok) {
-          const errBody = await presignRes.json().catch(() => ({}));
-          throw new Error((errBody as { error?: string }).error || `获取上传地址失败 (${presignRes.status})`);
+        if (presignErr || !presignData) {
+          throw new Error(presignErr?.message || "获取上传地址失败");
         }
 
-        const { presignedUrl, publicUrl } = await presignRes.json() as { presignedUrl: string; publicUrl: string };
+        const { presignedUrl, publicUrl } = presignData;
 
         // 步骤 2：直传 COS（浏览器 → COS，不经 Edge Function 中转）
         const uploadRes = await fetch(presignedUrl, {
