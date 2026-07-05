@@ -75,11 +75,11 @@ Deno.serve(async (req) => {
 
     // 解析请求参数
     const body = await req.json();
-    const { filename, contentType, slug, type, index } = body as {
-      filename: string; contentType: string; slug: string; type: string; index: string;
+    const { filename, contentType, key: customKey, slug, type, index } = body as {
+      filename: string; contentType: string; key?: string; slug?: string; type?: string; index?: string;
     };
 
-    if (!filename || !contentType || !slug || !type || !index) {
+    if (!filename || !contentType) {
       return new Response(JSON.stringify({ error: "缺少参数" }), {
         status: 400, headers: corsHeaders(),
       });
@@ -91,10 +91,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 100) || "post";
-    const safeType = ["calligraphy", "photography", "reflections"].includes(type) ? type : "photography";
-    const ext = filename.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "webp";
-    const key = `gallery/${safeType}/${safeSlug}/${index}-${Date.now()}.${ext}`;
+    // 如果传了 key 直接使用（封面图），否则按画廊路径构造
+    let key: string;
+    if (customKey) {
+      key = customKey;
+    } else {
+      if (!slug || !type || !index) {
+        return new Response(JSON.stringify({ error: "缺少参数" }), {
+          status: 400, headers: corsHeaders(),
+        });
+      }
+      const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 100) || "post";
+      const safeType = ["calligraphy", "photography", "reflections"].includes(type) ? type : "photography";
+      const ext = filename.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "webp";
+      key = `gallery/${safeType}/${safeSlug}/${index}-${Date.now()}.${ext}`;
+    }
 
     const bucket = Deno.env.get("COS_BUCKET")!;
     const region = Deno.env.get("COS_REGION")!;

@@ -117,21 +117,36 @@ export default function ContentForm({
     // 文件名可能含中文等非 ASCII 字符，生成安全文件名
     const ext = result.fileName.split(".").pop() || "webp";
     const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const filePath = `covers/${safeName}`;
+    const cosKey = `covers/${safeName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(type)
-      .upload(filePath, result.blob);
+    // 步骤 1：获取 COS 预签名 URL
+    const { data: presignData, error: presignErr } = await supabase.functions.invoke<{
+      presignedUrl: string;
+      publicUrl: string;
+    }>("cos-upload", {
+      body: {
+        filename: result.fileName,
+        contentType: result.blob.type,
+        key: cosKey,
+      },
+    });
 
-    if (uploadError) {
-      throw new Error(`图片上传失败: ${uploadError.message}`);
+    if (presignErr || !presignData) {
+      throw new Error(`获取上传地址失败: ${presignErr?.message || "未知错误"}`);
     }
 
-    const { data: urlData } = supabase.storage
-      .from(type)
-      .getPublicUrl(filePath);
+    // 步骤 2：直传 COS
+    const uploadRes = await fetch(presignData.presignedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": result.blob.type },
+      body: result.blob,
+    });
 
-    return urlData.publicUrl;
+    if (!uploadRes.ok) {
+      throw new Error(`COS 上传失败 (${uploadRes.status})`);
+    }
+
+    return presignData.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
