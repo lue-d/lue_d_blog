@@ -81,6 +81,9 @@ export default function AdminListClient({
     // 清理画廊图片记录
     await deleteAllGalleryImages(ct, slug);
 
+    // 清理关联留言
+    await supabase.from("comments").delete().eq("post_type", ct).eq("post_slug", slug);
+
     const { error } = await supabase.from(ct).delete().eq("id", id);
     if (!error) {
       setItems((prev) => prev.filter((item) => item.id !== id));
