@@ -26,6 +26,7 @@ export default function Carousel({
   const [current, setCurrent] = useState(0);
   const [hovered, setHovered] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartX = useRef(0);
 
   const len = images.length;
 
@@ -36,6 +37,21 @@ export default function Carousel({
 
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
+
+  // Touch swipe
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const diff = touchStartX.current - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) next(); else prev();
+      }
+    },
+    [next, prev]
+  );
 
   // Auto-play
   useEffect(() => {
@@ -56,6 +72,8 @@ export default function Carousel({
       className="relative group"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{ aspectRatio }}
     >
       {/* 图片层 */}
