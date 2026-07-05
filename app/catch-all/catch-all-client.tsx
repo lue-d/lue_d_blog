@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { remark } from "remark";
+import html from "remark-html";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CommentSection from "@/components/CommentSection";
@@ -10,11 +12,18 @@ import Breadcrumb from "@/components/Breadcrumb";
 import Carousel from "@/components/Carousel";
 import Lightbox from "@/components/Lightbox";
 import RelatedPosts from "@/components/RelatedPosts";
-import { getContentDataClient, getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
-import { getGalleryImagesClient } from "@/lib/gallery-client";
+import { supabase } from "@/lib/supabase";
+import type { ContentMeta } from "@/lib/content-supabase";
 import type { GalleryImage } from "@/lib/gallery";
 
 type ContentType = "photography" | "calligraphy" | "reflections";
+
+// 每张表的字段不同
+const LIST_COLUMNS: Record<ContentType, string> = {
+  calligraphy: "slug, title, date, description, cover, category, year, medium",
+  photography: "slug, title, date, description, cover, location, camera",
+  reflections: "slug, title, date, description, cover, category",
+};
 
 function parsePath(pathname: string): { type: ContentType; slug: string } | null {
   const match = pathname.match(/^\/(photography|calligraphy|reflections)\/([^/]+)\/?$/);
@@ -92,6 +101,81 @@ const CONFIG: Record<ContentType, {
   },
 };
 
+// 内联查询：获取文章列表（仅作为 catch-all 安全回退使用）
+async function fetchContentList(type: ContentType): Promise<ContentMeta[]> {
+  const { data, error } = await supabase
+    .from(type)
+    .select(LIST_COLUMNS[type])
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+
+  return ((data || []) as unknown as Record<string, unknown>[]).map((item) => ({
+    slug: item.slug as string,
+    title: item.title as string,
+    date: item.date ? String(item.date) : "",
+    description: (item.description as string) || "",
+    cover: (item.cover as string) || undefined,
+    category: (item.category as string) || undefined,
+    year: (item.year as string) || undefined,
+    medium: (item.medium as string) || undefined,
+    camera: (item.camera as string) || undefined,
+    location: (item.location as string) || undefined,
+  }));
+}
+
+// 内联查询：获取文章详情
+async function fetchContentData(
+  type: ContentType,
+  slug: string
+): Promise<{ meta: ContentMeta; html: string } | null> {
+  const { data, error } = await supabase
+    .from(type)
+    .select("*")
+    .eq("slug", slug)
+    .eq("published", true)
+    .single();
+
+  if (error || !data) return null;
+
+  const processed = await remark()
+    .use(html)
+    .process((data.content as string) || "");
+
+  return {
+    meta: {
+      slug: data.slug as string,
+      title: data.title as string,
+      date: data.date ? String(data.date) : "",
+      description: (data.description as string) || "",
+      cover: (data.cover as string) || undefined,
+      category: (data.category as string) || undefined,
+      year: (data.year as string) || undefined,
+      medium: (data.medium as string) || undefined,
+      camera: (data.camera as string) || undefined,
+      location: (data.location as string) || undefined,
+    },
+    html: processed.toString(),
+  };
+}
+
+// 内联查询：获取画廊图片
+async function fetchGalleryImages(
+  type: ContentType,
+  slug: string
+): Promise<GalleryImage[]> {
+  const { data, error } = await supabase
+    .from("images")
+    .select("*")
+    .eq("post_type", type)
+    .eq("post_slug", slug)
+    .order("sort_order", { ascending: true });
+
+  if (error) return [];
+  return (data || []) as GalleryImage[];
+}
+
 export default function CatchAllClient() {
   const [parsed, setParsed] = useState<{ type: ContentType; slug: string } | null>(null);
   const [data, setData] = useState<{ meta: ContentMeta; html: string } | null>(null);
@@ -113,8 +197,8 @@ export default function CatchAllClient() {
 
     const { type, slug } = result;
     Promise.all([
-      getContentDataClient(type, slug),
-      getGalleryImagesClient(type, slug),
+      fetchContentData(type, slug),
+      fetchGalleryImages(type, slug),
     ]).then(([contentResult, images]) => {
       if (!contentResult) {
         setNotFound(true);
@@ -125,7 +209,7 @@ export default function CatchAllClient() {
       setLoading(false);
 
       // 相关推荐
-      getContentListClient(type).then((all) => {
+      fetchContentList(type).then((all) => {
         const sameCategory = all.filter(
           (item) =>
             item.slug !== slug &&

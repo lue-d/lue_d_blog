@@ -1,28 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getCommentStats, type CommentStats } from "@/lib/comments-client";
 
-export default function StatsBar() {
-  const [stats, setStats] = useState<CommentStats | null>(null);
+interface StatsBarProps {
+  totalPhotography: number;
+  totalCalligraphy: number;
+  totalComments: number;
+}
 
-  useEffect(() => {
-    getCommentStats().then(setStats);
-  }, []);
-
-  if (!stats) {
-    return (
-      <div className="flex flex-col gap-3 animate-pulse">
-        <div className="h-5 w-24 bg-ink-border/20 rounded" />
-        <div className="h-5 w-24 bg-ink-border/20 rounded" />
-        <div className="h-5 w-24 bg-ink-border/20 rounded" />
-      </div>
-    );
-  }
-
-  const { totalPhotography, totalCalligraphy, totalComments } = stats;
-
+export default function StatsBar({
+  totalPhotography,
+  totalCalligraphy,
+  totalComments,
+}: StatsBarProps) {
   return (
     <div className="flex flex-col gap-3 text-sm">
       <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -10,53 +10,22 @@ import Breadcrumb from "@/components/Breadcrumb";
 import Carousel from "@/components/Carousel";
 import Lightbox from "@/components/Lightbox";
 import RelatedPosts from "@/components/RelatedPosts";
-import { getContentDataClient, getContentListClient, type ContentMeta } from "@/lib/content-supabase-client";
-import { getGalleryImagesClient } from "@/lib/gallery-client";
+import type { ContentMeta } from "@/lib/content-supabase";
 import type { GalleryImage } from "@/lib/gallery";
 
 export default function PhotographyDetailClient({
-  params,
+  slug,
+  initialData,
+  initialGallery,
+  initialRelatedPosts,
 }: {
-  params: Promise<{ slug: string }>;
+  slug: string;
+  initialData: { meta: ContentMeta; html: string } | null;
+  initialGallery: GalleryImage[];
+  initialRelatedPosts: ContentMeta[];
 }) {
-  const { slug } = use(params);
-  const [data, setData] = useState<{ meta: ContentMeta; html: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [relatedPosts, setRelatedPosts] = useState<ContentMeta[]>([]);
-
-  useEffect(() => {
-    Promise.all([
-      getContentDataClient("photography", slug),
-      getGalleryImagesClient("photography", slug),
-    ]).then(([result, images]) => {
-      if (!result) {
-        setNotFound(true);
-      } else {
-        setData(result);
-      }
-      setGalleryImages(images);
-      setLoading(false);
-      // 获取相关推荐
-      getContentListClient("photography").then((all) => {
-        const sameCategory = all.filter(
-          (item) =>
-            item.slug !== slug &&
-            result?.meta.category &&
-            item.category === result.meta.category
-        );
-        const others = all.filter(
-          (item) =>
-            item.slug !== slug &&
-            (!result?.meta.category || item.category !== result.meta.category)
-        );
-        setRelatedPosts([...sameCategory, ...others].slice(0, 3));
-      });
-    });
-  }, [slug]);
 
   return (
     <>
@@ -66,25 +35,11 @@ export default function PhotographyDetailClient({
           items={[
             { label: "首页", href: "/" },
             { label: "摄影集", href: "/photography" },
-            ...(data ? [{ label: data.meta.title }] : []),
+            ...(initialData ? [{ label: initialData.meta.title }] : []),
           ]}
         />
 
-        {loading ? (
-          <article className="mt-8">
-            <div className="aspect-[3/2] rounded-lg bg-ink-border/20 animate-pulse mb-8" />
-            <div className="h-9 w-2/3 bg-ink-border/20 rounded animate-pulse mb-4" />
-            <div className="flex gap-4 mb-8">
-              <div className="h-4 w-16 bg-ink-border/20 rounded animate-pulse" />
-              <div className="h-4 w-24 bg-ink-border/20 rounded animate-pulse" />
-            </div>
-            <div className="space-y-3">
-              <div className="h-4 w-full bg-ink-border/20 rounded animate-pulse" />
-              <div className="h-4 w-5/6 bg-ink-border/20 rounded animate-pulse" />
-              <div className="h-4 w-4/6 bg-ink-border/20 rounded animate-pulse" />
-            </div>
-          </article>
-        ) : notFound ? (
+        {!initialData ? (
           <div className="text-center py-24">
             <p className="text-ink-muted dark:text-ink-dark-muted mb-2">
               未找到该摄影作品
@@ -96,13 +51,13 @@ export default function PhotographyDetailClient({
               ← 返回摄影集
             </Link>
           </div>
-        ) : data ? (
+        ) : (
           <article className="mt-8">
             {/* 走马灯展示作品图片，无作品图片时回退到封面 */}
-            {galleryImages.length > 0 ? (
+            {initialGallery.length > 0 ? (
               <div className="mb-8">
                 <Carousel
-                  images={galleryImages}
+                  images={initialGallery}
                   aspectRatio="3/2"
                   onImageClick={(idx) => {
                     setLightboxIndex(idx);
@@ -110,11 +65,11 @@ export default function PhotographyDetailClient({
                   }}
                 />
               </div>
-            ) : data.meta.cover ? (
+            ) : initialData.meta.cover ? (
               <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-ink-border/30 mb-8">
                 <Image
-                  src={data.meta.cover}
-                  alt={data.meta.title}
+                  src={initialData.meta.cover}
+                  alt={initialData.meta.title}
                   fill
                   unoptimized
                   className="object-contain"
@@ -125,38 +80,38 @@ export default function PhotographyDetailClient({
             ) : null}
 
             <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-serif)] tracking-wide mb-4">
-              {data.meta.title}
+              {initialData.meta.title}
             </h1>
 
             <div className="flex flex-wrap gap-4 text-sm text-ink-muted dark:text-ink-dark-muted mb-8">
-              {data.meta.date && <span>{data.meta.date}</span>}
-              {data.meta.location && <span>📍 {data.meta.location}</span>}
-              {data.meta.camera && <span>📷 {data.meta.camera}</span>}
+              {initialData.meta.date && <span>{initialData.meta.date}</span>}
+              {initialData.meta.location && <span>📍 {initialData.meta.location}</span>}
+              {initialData.meta.camera && <span>📷 {initialData.meta.camera}</span>}
             </div>
 
-            <div className="prose" dangerouslySetInnerHTML={{ __html: data.html }} />
+            <div
+              className="prose"
+              dangerouslySetInnerHTML={{ __html: initialData.html }}
+            />
           </article>
-        ) : null}
-
-        {data && relatedPosts.length > 0 && (
-          <RelatedPosts
-            posts={relatedPosts}
-            basePath="/photography"
-          />
         )}
 
-        {data && (
+        {initialData && initialRelatedPosts.length > 0 && (
+          <RelatedPosts posts={initialRelatedPosts} basePath="/photography" />
+        )}
+
+        {initialData && (
           <CommentSection
             postType="photography"
             postSlug={slug}
-            postTitle={data.meta.title}
+            postTitle={initialData.meta.title}
           />
         )}
       </main>
       <Footer />
 
       <Lightbox
-        images={galleryImages}
+        images={initialGallery}
         currentIndex={lightboxIndex}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}

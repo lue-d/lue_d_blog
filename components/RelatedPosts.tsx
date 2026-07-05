@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { ContentMeta } from "@/lib/content-supabase-client";
+import type { ContentMeta } from "@/lib/content-supabase";
 
 interface Props {
   posts: ContentMeta[];
