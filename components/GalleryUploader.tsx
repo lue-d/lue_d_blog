@@ -22,6 +22,16 @@ interface PendingImage {
   dbId?: string;
 }
 
+interface TouchDragState {
+  dragIndex: number;
+  currentIndex: number;
+  startX: number;
+  startY: number;
+  dragging: boolean;
+  clone: HTMLElement | null;
+  element: HTMLElement | null;
+}
+
 export interface GalleryUploaderHandle {
   /** Upload all pending images. Call after content is saved (slug is known). */
   uploadAll: (slug: string) => Promise<{ success: boolean; error?: string }>;
@@ -39,6 +49,8 @@ interface Props {
 const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
   function GalleryUploader({ postType, existingImages }, ref) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const gridRef = useRef<HTMLDivElement>(null);
+    const touchDragRef = useRef<TouchDragState | null>(null);
 
     const [savedImages, setSavedImages] = useState<GalleryImage[]>(existingImages);
     const [pendingFiles, setPendingFiles] = useState<PendingImage[]>([]);
@@ -93,7 +105,45 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
       setRemovedIds((prev) => [...prev, img.id]);
     }, []);
 
-    // ---- DnD ----
+    // ---- Shared reorder logic (used by both mouse DnD and touch) ----
+    const reorder = useCallback(
+      (fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex) return;
+
+        const combined = [
+          ...savedImages.map((s, idx) => ({ type: "saved" as const, index: idx })),
+          ...pendingFiles.map((p, idx) => ({ type: "pending" as const, index: idx })),
+        ];
+
+        const dragged = combined[fromIndex];
+        if (!dragged) return;
+
+        const newSaved = [...savedImages];
+        const newPending = [...pendingFiles];
+
+        if (dragged.type === "saved") {
+          const [moved] = newSaved.splice(dragged.index, 1);
+          const adjustedDrop = toIndex > fromIndex ? toIndex - 1 : toIndex;
+          if (adjustedDrop < newSaved.length) {
+            newSaved.splice(adjustedDrop, 0, moved);
+          } else {
+            newSaved.push(moved);
+          }
+        } else {
+          const [moved] = newPending.splice(dragged.index, 1);
+          const pendingStartIdx = newSaved.length;
+          const adjustedDrop = toIndex > fromIndex ? toIndex - 1 : toIndex;
+          const insertAt = Math.max(0, adjustedDrop - pendingStartIdx);
+          newPending.splice(Math.min(insertAt, newPending.length), 0, moved);
+        }
+
+        setSavedImages(newSaved);
+        setPendingFiles(newPending);
+      },
+      [savedImages, pendingFiles]
+    );
+
+    // ---- Mouse DnD ----
     const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
       e.dataTransfer.setData("text/plain", String(index));
       (e.currentTarget as HTMLElement).style.opacity = "0.4";
@@ -112,42 +162,117 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
       (e: React.DragEvent, dropIndex: number) => {
         e.preventDefault();
         const dragIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
-        if (isNaN(dragIndex) || dragIndex === dropIndex) return;
+        if (isNaN(dragIndex)) return;
+        reorder(dragIndex, dropIndex);
+      },
+      [reorder]
+    );
 
-        const combined = [
-          ...savedImages.map((s, idx) => ({ type: "saved" as const, index: idx })),
-          ...pendingFiles.map((p, idx) => ({ type: "pending" as const, index: idx })),
-        ];
+    // ---- Touch DnD (mobile) ----
+    const handleTouchStart = useCallback(
+      (e: React.TouchEvent, index: number) => {
+        if (uploading) return;
+        const touch = e.touches[0];
+        const el = e.currentTarget as HTMLElement;
 
-        const dragged = combined[dragIndex];
-        if (!dragged) return;
+        touchDragRef.current = {
+          dragIndex: index,
+          currentIndex: index,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          dragging: false,
+          clone: null,
+          element: el,
+        };
+      },
+      [uploading]
+    );
 
-        const newSaved = [...savedImages];
-        const newPending = [...pendingFiles];
+    const handleTouchMove = useCallback(
+      (e: React.TouchEvent) => {
+        const drag = touchDragRef.current;
+        if (!drag) return;
 
-        if (dragged.type === "saved") {
-          const [moved] = newSaved.splice(dragged.index, 1);
-          // Find where to insert in combined list after removal
-          const adjustedDrop = dropIndex > dragIndex ? dropIndex - 1 : dropIndex;
-          if (adjustedDrop < newSaved.length) {
-            newSaved.splice(adjustedDrop, 0, moved);
-          } else {
-            newSaved.push(moved);
-          }
-        } else {
-          const [moved] = newPending.splice(dragged.index, 1);
-          // saved images take first positions
-          const pendingStartIdx = newSaved.length;
-          const adjustedDrop = dropIndex > dragIndex ? dropIndex - 1 : dropIndex;
-          const insertAt = Math.max(0, adjustedDrop - pendingStartIdx);
-          newPending.splice(Math.min(insertAt, newPending.length), 0, moved);
+        const touch = e.touches[0];
+
+        // Only activate drag after 8px movement (avoid scroll conflict)
+        if (!drag.dragging) {
+          const dx = touch.clientX - drag.startX;
+          const dy = touch.clientY - drag.startY;
+          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+          drag.dragging = true;
+
+          // Create floating clone
+          const el = drag.element!;
+          const rect = el.getBoundingClientRect();
+          const clone = el.cloneNode(true) as HTMLElement;
+          clone.style.position = "fixed";
+          clone.style.zIndex = "9999";
+          clone.style.width = rect.width + "px";
+          clone.style.height = rect.height + "px";
+          clone.style.left = rect.left + "px";
+          clone.style.top = rect.top + "px";
+          clone.style.opacity = "0.85";
+          clone.style.pointerEvents = "none";
+          clone.style.transform = "scale(1.05)";
+          clone.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
+          clone.style.borderRadius = "0.5rem";
+          clone.style.transition = "none";
+          // Remove interactive elements from clone
+          clone.querySelectorAll("button").forEach((b) => b.remove());
+          clone.querySelectorAll("span").forEach((s) => {
+            if (s.textContent === "待上传") s.remove();
+          });
+          document.body.appendChild(clone);
+          drag.clone = clone;
+          el.style.opacity = "0.3";
         }
 
-        setSavedImages(newSaved);
-        setPendingFiles(newPending);
+        e.preventDefault();
+
+        // Move clone with finger
+        if (drag.clone) {
+          drag.clone.style.left =
+            touch.clientX - drag.clone.offsetWidth / 2 + "px";
+          drag.clone.style.top =
+            touch.clientY - drag.clone.offsetHeight / 2 + "px";
+        }
+
+        // Find target position under finger
+        if (drag.clone) drag.clone.style.display = "none";
+        const elUnder = document.elementFromPoint(
+          touch.clientX,
+          touch.clientY
+        );
+        if (drag.clone) drag.clone.style.display = "";
+
+        const gridItem = elUnder?.closest(
+          "[data-dnd-index]"
+        ) as HTMLElement | null;
+        if (gridItem) {
+          const newIndex = parseInt(gridItem.dataset.dndIndex!, 10);
+          if (!isNaN(newIndex) && newIndex !== drag.currentIndex) {
+            reorder(drag.currentIndex, newIndex);
+            drag.currentIndex = newIndex;
+          }
+        }
       },
-      [savedImages, pendingFiles]
+      [reorder]
     );
+
+    const handleTouchEnd = useCallback(() => {
+      const drag = touchDragRef.current;
+      if (!drag) return;
+
+      if (drag.clone) {
+        document.body.removeChild(drag.clone);
+      }
+      if (drag.element) {
+        drag.element.style.opacity = "1";
+      }
+
+      touchDragRef.current = null;
+    }, []);
 
     // ---- Upload logic ----
     const uploadSingleFile = useCallback(
@@ -342,15 +467,22 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
         />
 
         {allImages.length > 0 ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+          <div
+            ref={gridRef}
+            className="grid grid-cols-3 md:grid-cols-4 gap-3"
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             {allImages.map((img, index) => (
               <div
                 key={img.id}
+                data-dnd-index={index}
                 draggable={!uploading}
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, index)}
+                onTouchStart={(e) => handleTouchStart(e, index)}
                 className={`relative group aspect-square rounded-lg overflow-hidden bg-ink-border/30 border-2 ${
                   img.status === "error"
                     ? "border-red-400"
@@ -386,7 +518,7 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
                         ? removePending(img.id)
                         : removeSaved(savedImages.find((s) => s.id === img.id)!)
                     }
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-red-500"
                   >
                     ✕
                   </button>
