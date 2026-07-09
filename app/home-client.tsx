@@ -43,6 +43,7 @@ export default function HomeClient({
               <StatsBar
                 totalPhotography={stats.totalPhotography}
                 totalCalligraphy={stats.totalCalligraphy}
+                totalReflections={stats.totalReflections}
                 totalComments={stats.totalComments}
               />
             </div>
@@ -53,6 +54,7 @@ export default function HomeClient({
             <StatsBar
               totalPhotography={stats.totalPhotography}
               totalCalligraphy={stats.totalCalligraphy}
+              totalReflections={stats.totalReflections}
               totalComments={stats.totalComments}
             />
           </div>

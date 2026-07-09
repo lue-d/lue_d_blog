@@ -4,6 +4,7 @@ import { supabaseAdmin } from "./supabase-admin";
 export interface CommentStats {
   totalPhotography: number;
   totalCalligraphy: number;
+  totalReflections: number;
   totalComments: number;
 }
 
@@ -12,13 +13,17 @@ export interface CommentStats {
  * 使用 service_role key，绕过 RLS
  */
 export async function getCommentStatsServer(): Promise<CommentStats> {
-  const [photoRes, calliRes, commentRes] = await Promise.all([
+  const [photoRes, calliRes, reflectRes, commentRes] = await Promise.all([
     supabaseAdmin
       .from("photography")
       .select("*", { count: "exact", head: true })
       .eq("published", true),
     supabaseAdmin
       .from("calligraphy")
+      .select("*", { count: "exact", head: true })
+      .eq("published", true),
+    supabaseAdmin
+      .from("reflections")
       .select("*", { count: "exact", head: true })
       .eq("published", true),
     supabaseAdmin
@@ -30,6 +35,7 @@ export async function getCommentStatsServer(): Promise<CommentStats> {
   return {
     totalPhotography: photoRes.count ?? 0,
     totalCalligraphy: calliRes.count ?? 0,
+    totalReflections: reflectRes.count ?? 0,
     totalComments: commentRes.count ?? 0,
   };
 }

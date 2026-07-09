@@ -31,12 +31,6 @@ export default function DailyQuote() {
         —— {quote.source}
       </p>
 
-      {/* 标签 */}
-      <div className="mt-5">
-        <span className="inline-block text-xs tracking-wider text-ink-accent/60 border border-ink-accent/20 rounded-full px-3 py-0.5">
-          每日正能量
-        </span>
-      </div>
     </div>
   );
 }

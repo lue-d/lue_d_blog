@@ -28,21 +28,23 @@ export default function RelatedPosts({ posts, basePath }: Props) {
             href={`${basePath}/${item.slug}`}
             className="group block"
           >
-            <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-ink-border/30 mb-2 shadow-card group-hover:shadow-card-hover transition-shadow duration-500">
-              {item.gallery_thumbnail ?? item.cover ? (
-                <Image
-                  src={(item.gallery_thumbnail ?? item.cover)!}
-                  alt={item.title}
-                  fill
-                  unoptimized
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-ink-muted text-sm">
-                  暂无图片
-                </div>
-              )}
+            <div className="w-3/4 md:w-1/2">
+              <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-ink-border/30 mb-2 shadow-card group-hover:shadow-card-hover transition-shadow duration-500">
+                {item.gallery_thumbnail ?? item.cover ? (
+                  <Image
+                    src={(item.gallery_thumbnail ?? item.cover)!}
+                    alt={item.title}
+                    fill
+                    unoptimized
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 75vw, 16vw"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-ink-muted text-sm">
+                    暂无图片
+                  </div>
+                )}
+              </div>
             </div>
             <h3 className="text-sm font-semibold group-hover:text-ink-accent transition-colors line-clamp-1 font-[family-name:var(--font-serif)]">
               {item.title}

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { compressImage, formatSize } from "@/lib/compress-image";
 import GalleryUploader, { type GalleryUploaderHandle, type GalleryImage } from "./GalleryUploader";
+import { useFormDraft } from "@/hooks/useFormDraft";
+import { showToast, stashToast } from "@/components/Toast";
 
 type ContentType = "calligraphy" | "photography" | "reflections";
 
@@ -69,6 +71,28 @@ export default function ContentForm({
   const [compressionNote, setCompressionNote] = useState("");
   const galleryRef = useRef<GalleryUploaderHandle>(null);
 
+  // 草稿自动保存 & 恢复
+  const draftId = (initialData as { id?: string } | undefined)?.id;
+  const { save, clearDraft, getDraft, draftRestored } = useFormDraft<FormData>({
+    type,
+    mode,
+    id: draftId,
+    initialData: { ...EMPTY_FORM, ...initialData },
+  });
+
+  // 挂载时恢复草稿
+  useEffect(() => {
+    const draft = getDraft();
+    if (draft) {
+      setForm(draft);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 每次表单变化自动保存
+  useEffect(() => {
+    save(form);
+  }, [form, save]);
+
   const update = (key: keyof FormData, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -120,27 +144,44 @@ export default function ContentForm({
     const cosKey = `covers/${safeName}`;
 
     // 步骤 1：获取 COS 预签名 URL
-    const { data: presignData, error: presignErr } = await supabase.functions.invoke<{
-      presignedUrl: string;
-      publicUrl: string;
-    }>("cos-upload", {
-      body: {
-        filename: result.fileName,
-        contentType: result.blob.type,
-        key: cosKey,
-      },
-    });
+    let presignData: { presignedUrl: string; publicUrl: string } | null = null;
+    let presignErr: Error | null = null;
+    try {
+      const res = await supabase.functions.invoke<{
+        presignedUrl: string;
+        publicUrl: string;
+      }>("cos-upload", {
+        body: {
+          filename: result.fileName,
+          contentType: result.blob.type,
+          key: cosKey,
+        },
+      });
+      presignData = res.data;
+      presignErr = res.error;
+    } catch (networkErr) {
+      throw new Error(
+        `无法连接上传服务（${networkErr instanceof Error ? networkErr.message : "网络错误"}），请检查网络或登录是否过期`
+      );
+    }
 
     if (presignErr || !presignData) {
       throw new Error(`获取上传地址失败: ${presignErr?.message || "未知错误"}`);
     }
 
     // 步骤 2：直传 COS
-    const uploadRes = await fetch(presignData.presignedUrl, {
-      method: "PUT",
-      headers: { "Content-Type": result.blob.type },
-      body: result.blob,
-    });
+    let uploadRes: Response;
+    try {
+      uploadRes = await fetch(presignData.presignedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": result.blob.type },
+        body: result.blob,
+      });
+    } catch (networkErr) {
+      throw new Error(
+        `无法连接对象存储（${networkErr instanceof Error ? networkErr.message : "网络错误"}）`
+      );
+    }
 
     if (!uploadRes.ok) {
       throw new Error(`COS 上传失败 (${uploadRes.status})`);
@@ -193,9 +234,15 @@ export default function ContentForm({
       };
 
       if (mode === "create") {
-        const { error: insertError } = await supabase
-          .from(type)
-          .insert(payload);
+        let insertError: Error | null = null;
+        try {
+          const res = await supabase.from(type).insert(payload);
+          insertError = res.error;
+        } catch (networkErr) {
+          throw new Error(
+            `无法连接服务器（${networkErr instanceof Error ? networkErr.message : "网络错误"}），请检查网络连接`
+          );
+        }
         if (insertError) throw new Error(insertError.message);
 
         // Upload gallery images after content is saved (slug exists)
@@ -208,10 +255,18 @@ export default function ContentForm({
           }
         }
       } else {
-        const { error: updateError } = await supabase
-          .from(type)
-          .update(payload)
-          .eq("id", initialData?.id);
+        let updateError: Error | null = null;
+        try {
+          const res = await supabase
+            .from(type)
+            .update(payload)
+            .eq("id", initialData?.id);
+          updateError = res.error;
+        } catch (networkErr) {
+          throw new Error(
+            `无法连接服务器（${networkErr instanceof Error ? networkErr.message : "网络错误"}），请检查网络连接`
+          );
+        }
         if (updateError) throw new Error(updateError.message);
 
         // Sync gallery changes
@@ -225,10 +280,14 @@ export default function ContentForm({
         }
       }
 
+      stashToast("success", mode === "create" ? `${label}创建成功` : `${label}更新成功`);
       router.push(`/admin/${type}`);
       router.refresh();
+      clearDraft();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "操作失败");
+      const msg = err instanceof Error ? err.message : "操作失败";
+      setError(msg);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -241,6 +300,23 @@ export default function ContentForm({
       {error && (
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
           {error}
+        </div>
+      )}
+
+      {draftRestored && !error && (
+        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm flex items-center gap-2">
+          <span>📝</span>
+          <span>已恢复上次未保存的草稿</span>
+          <button
+            type="button"
+            onClick={() => {
+              clearDraft();
+              setForm({ ...EMPTY_FORM, ...initialData } as FormData);
+            }}
+            className="ml-auto text-xs underline hover:no-underline"
+          >
+            丢弃草稿
+          </button>
         </div>
       )}
 

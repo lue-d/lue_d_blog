@@ -5,12 +5,14 @@ import Link from "next/link";
 interface StatsBarProps {
   totalPhotography: number;
   totalCalligraphy: number;
+  totalReflections: number;
   totalComments: number;
 }
 
 export default function StatsBar({
   totalPhotography,
   totalCalligraphy,
+  totalReflections,
   totalComments,
 }: StatsBarProps) {
   return (
@@ -34,6 +36,16 @@ export default function StatsBar({
           {totalCalligraphy}
         </strong>
         <span>幅书法</span>
+      </Link>
+      <Link
+        href="/reflections"
+        className="flex items-center gap-2 text-ink-muted hover:text-ink-accent transition-colors"
+      >
+        <span>📝</span>
+        <strong className="text-ink-text dark:text-ink-dark-text">
+          {totalReflections}
+        </strong>
+        <span>篇感悟</span>
       </Link>
       <span className="flex items-center gap-2 text-ink-muted">
         <span>💬</span>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import ToastContainer from "@/components/Toast";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "仪表盘" },
@@ -128,6 +129,9 @@ export default function AdminLayout({
 
       {/* 内容区 */}
       <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
+
+      {/* Toast 气泡提醒 */}
+      <ToastContainer />
     </div>
   );
 }

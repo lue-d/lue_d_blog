@@ -30,6 +30,8 @@ export default function AdminDashboard() {
 
   const [deploying, setDeploying] = useState(false);
   const [deployMsg, setDeployMsg] = useState("");
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [tokenInput, setTokenInput] = useState("");
 
   useEffect(() => {
     async function fetchCounts() {
@@ -161,57 +163,125 @@ export default function AdminDashboard() {
           内容修改后，点击此按钮重新构建并部署网站，约 1-2 分钟生效。
           首次使用需要输入 GitHub Personal Access Token（需 workflows 权限）。
         </p>
-        <button
-          onClick={async () => {
-            setDeploying(true);
-            setDeployMsg("");
+        {showTokenInput ? (
+          <div className="space-y-3">
+            <p className="text-sm text-ink-text dark:text-ink-dark-text">
+              请输入 GitHub Personal Access Token（仅需一次，后续自动保存）：
+            </p>
+            <p className="text-xs text-ink-muted">
+              创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 选择仓库 + Workflows 权限
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                className="input flex-1"
+                placeholder="ghp_xxxxxxxxxxxx"
+              />
+              <button
+                onClick={async () => {
+                  if (!tokenInput.trim()) return;
+                  setShowTokenInput(false);
+                  setDeploying(true);
+                  setDeployMsg("");
 
-            const STORAGE_KEY = "gh_deploy_token";
-            let token = localStorage.getItem(STORAGE_KEY);
+                  const STORAGE_KEY = "gh_deploy_token";
+                  const token = tokenInput.trim();
 
-            if (!token) {
-              token = prompt(
-                "请输入 GitHub Personal Access Token（仅需一次，后续自动保存）：\n\n创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 选择仓库 + Workflows 权限"
-              );
-              if (!token) {
-                setDeploying(false);
-                return;
-              }
-            }
+                  try {
+                    const res = await fetch(
+                      `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/deploy.yml/dispatches`,
+                      {
+                        method: "POST",
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          Accept: "application/vnd.github+json",
+                        },
+                        body: JSON.stringify({ ref: "master" }),
+                      }
+                    );
+                    if (res.ok) {
+                      localStorage.setItem(STORAGE_KEY, token);
+                      setDeployMsg("已触发部署，约 1-2 分钟后生效");
+                    } else if (res.status === 401 || res.status === 403) {
+                      setDeployMsg("Token 无效，请重新点击发布");
+                    } else {
+                      setDeployMsg(`触发失败 (${res.status})，请检查 Token 权限`);
+                    }
+                  } catch {
+                    setDeployMsg("网络错误，请重试");
+                  }
+                  setDeploying(false);
+                  setTokenInput("");
+                }}
+                disabled={deploying || !tokenInput.trim()}
+                className="px-4 py-2 bg-ink-accent text-white rounded-lg text-sm font-medium hover:bg-ink-green transition-colors disabled:opacity-50"
+              >
+                确认
+              </button>
+              <button
+                onClick={() => {
+                  setShowTokenInput(false);
+                  setTokenInput("");
+                }}
+                className="px-4 py-2 border border-ink-border rounded-lg text-sm text-ink-muted hover:text-ink-text transition-colors"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={async () => {
+                setDeploying(true);
+                setDeployMsg("");
 
-            try {
-              const res = await fetch(
-                `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/deploy.yml/dispatches`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/vnd.github+json",
-                  },
-                  body: JSON.stringify({ ref: "master" }),
+                const STORAGE_KEY = "gh_deploy_token";
+                let token = localStorage.getItem(STORAGE_KEY);
+
+                if (!token) {
+                  setDeploying(false);
+                  setShowTokenInput(true);
+                  return;
                 }
-              );
-              if (res.ok) {
-                localStorage.setItem(STORAGE_KEY, token);
-                setDeployMsg("已触发部署，约 1-2 分钟后生效");
-              } else if (res.status === 401 || res.status === 403) {
-                localStorage.removeItem(STORAGE_KEY);
-                setDeployMsg("Token 已失效，请重新点击发布");
-              } else {
-                setDeployMsg(`触发失败 (${res.status})，请检查 Token 权限`);
-              }
-            } catch {
-              setDeployMsg("网络错误，请重试");
-            }
-            setDeploying(false);
-          }}
-          disabled={deploying}
-          className="px-4 py-2 bg-ink-accent text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {deploying ? "触发中..." : "🚀 发布更新"}
-        </button>
-        {deployMsg && (
-          <p className="mt-3 text-sm text-ink-accent">{deployMsg}</p>
+
+                try {
+                  const res = await fetch(
+                    `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/deploy.yml/dispatches`,
+                    {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/vnd.github+json",
+                      },
+                      body: JSON.stringify({ ref: "master" }),
+                    }
+                  );
+                  if (res.ok) {
+                    localStorage.setItem(STORAGE_KEY, token);
+                    setDeployMsg("已触发部署，约 1-2 分钟后生效");
+                  } else if (res.status === 401 || res.status === 403) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    setDeployMsg("Token 已失效，请重新点击发布");
+                  } else {
+                    setDeployMsg(`触发失败 (${res.status})，请检查 Token 权限`);
+                  }
+                } catch {
+                  setDeployMsg("网络错误，请重试");
+                }
+                setDeploying(false);
+              }}
+              disabled={deploying}
+              className="px-4 py-2 bg-ink-accent text-white rounded-lg text-sm font-medium hover:bg-ink-green transition-colors disabled:opacity-50"
+            >
+              {deploying ? "触发中..." : "🚀 发布更新"}
+            </button>
+            {deployMsg && (
+              <p className="mt-3 text-sm text-ink-accent">{deployMsg}</p>
+            )}
+          </>
         )}
       </div>
     </div>

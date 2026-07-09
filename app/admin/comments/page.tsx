@@ -10,6 +10,7 @@ import {
   getAdminCommentStats,
   type Comment,
 } from "@/lib/comments-admin";
+import { showToast } from "@/components/Toast";
 
 const TYPE_FILTER_OPTIONS = [
   { value: "", label: "全部类型" },
@@ -62,8 +63,9 @@ export default function AdminCommentsPage() {
     try {
       await togglePublish(id, !current);
       await fetchData();
+      showToast("success", current ? "已驳回" : "已通过");
     } catch {
-      alert("操作失败，请重试");
+      showToast("error", "操作失败，请重试");
     } finally {
       setActionLoading(null);
     }
@@ -75,8 +77,9 @@ export default function AdminCommentsPage() {
       await deleteComment(id);
       setDeleteConfirm(null);
       await fetchData();
+      showToast("success", "留言已删除");
     } catch {
-      alert("删除失败，请重试");
+      showToast("error", "删除失败，请重试");
     } finally {
       setActionLoading(null);
     }

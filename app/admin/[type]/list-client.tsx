@@ -6,6 +6,7 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { deleteAllGalleryImages } from "@/lib/gallery-client";
 import type { ContentMeta } from "@/lib/content-supabase";
+import { showToast, consumeStashedToast } from "@/components/Toast";
 
 type ContentType = "calligraphy" | "photography" | "reflections";
 
@@ -41,6 +42,11 @@ export default function AdminListClient({
 
   const ct = type as ContentType;
   const label = TYPE_LABEL[ct];
+
+  useEffect(() => {
+    // 消费从创建/编辑页传来的 toast
+    consumeStashedToast();
+  }, []);
 
   useEffect(() => {
     async function fetchItems() {
@@ -87,8 +93,9 @@ export default function AdminListClient({
     const { error } = await supabase.from(ct).delete().eq("id", id);
     if (!error) {
       setItems((prev) => prev.filter((item) => item.id !== id));
+      showToast("success", `${label}已删除`);
     } else {
-      alert(`删除失败: ${error.message}`);
+      showToast("error", `删除失败: ${error.message}`);
     }
     setDeleting(null);
   };
@@ -99,7 +106,7 @@ export default function AdminListClient({
         <h1 className="text-2xl font-bold font-[family-name:var(--font-serif)] tracking-wide">
           {label}管理
         </h1>
-        <Link href={`/admin/${ct}/new`} className="btn-primary text-sm">
+        <Link href={`/admin/${ct}/new`} className="btn-primary text-sm" title={`新增${label}作品`}>
           + 新增{label}
         </Link>
       </div>

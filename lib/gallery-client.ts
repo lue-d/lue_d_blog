@@ -102,9 +102,21 @@ export async function updateGallerySortOrder(
 }
 
 /**
- * 删除一条画廊图片记录
+ * 删除一条画廊图片记录（可选：同步删除 COS 文件）
  */
-export async function deleteGalleryImage(id: string): Promise<boolean> {
+export async function deleteGalleryImage(id: string, url?: string): Promise<boolean> {
+  // 先删 COS 文件
+  if (url) {
+    try {
+      await supabase.functions.invoke("cos-delete", {
+        body: { urls: [url] },
+      });
+    } catch (err) {
+      console.error("[gallery-client] COS 删除失败:", err);
+      // COS 删除失败不阻止数据库删除
+    }
+  }
+
   const { error } = await supabase
     .from("images")
     .delete()
@@ -118,12 +130,33 @@ export async function deleteGalleryImage(id: string): Promise<boolean> {
 }
 
 /**
- * 删除指定文章的所有画廊图片记录
+ * 删除指定文章的所有画廊图片记录（含 COS 文件）
  */
 export async function deleteAllGalleryImages(
   type: ContentType,
   slug: string
 ): Promise<boolean> {
+  // 先查出所有图片 URL
+  const { data: images } = await supabase
+    .from("images")
+    .select("url")
+    .eq("post_type", type)
+    .eq("post_slug", slug);
+
+  const urls = (images || []).map((img: { url: string }) => img.url).filter(Boolean);
+
+  // 从 COS 删除文件
+  if (urls.length > 0) {
+    try {
+      await supabase.functions.invoke("cos-delete", {
+        body: { urls },
+      });
+    } catch (err) {
+      console.error("[gallery-client] COS 批量删除失败:", err);
+    }
+  }
+
+  // 删除数据库记录
   const { error } = await supabase
     .from("images")
     .delete()

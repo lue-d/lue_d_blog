@@ -54,7 +54,7 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
 
     const [savedImages, setSavedImages] = useState<GalleryImage[]>(existingImages);
     const [pendingFiles, setPendingFiles] = useState<PendingImage[]>([]);
-    const [removedIds, setRemovedIds] = useState<string[]>([]);
+    const [removedImages, setRemovedImages] = useState<{ id: string; url: string }[]>([]);
     const [uploading, setUploading] = useState(false);
     const [compressionNote, setCompressionNote] = useState("");
 
@@ -102,7 +102,7 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
 
     const removeSaved = useCallback((img: GalleryImage) => {
       setSavedImages((prev) => prev.filter((s) => s.id !== img.id));
-      setRemovedIds((prev) => [...prev, img.id]);
+      setRemovedImages((prev) => [...prev, { id: img.id, url: img.url }]);
     }, []);
 
     // ---- Shared reorder logic (used by both mouse DnD and touch) ----
@@ -288,18 +288,28 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
         }
 
         // 步骤 1：从 Edge Function 获取 COS 预签名 URL
-        const { data: presignData, error: presignErr } = await supabase.functions.invoke<{
-          presignedUrl: string;
-          publicUrl: string;
-        }>("cos-upload", {
-          body: {
-            filename: result.fileName,
-            contentType: result.blob.type,
-            slug,
-            type: postType,
-            index: String(sortOrder),
-          },
-        });
+        let presignData: { presignedUrl: string; publicUrl: string } | null = null;
+        let presignErr: Error | null = null;
+        try {
+          const res = await supabase.functions.invoke<{
+            presignedUrl: string;
+            publicUrl: string;
+          }>("cos-upload", {
+            body: {
+              filename: result.fileName,
+              contentType: result.blob.type,
+              slug,
+              type: postType,
+              index: String(sortOrder),
+            },
+          });
+          presignData = res.data;
+          presignErr = res.error;
+        } catch (networkErr) {
+          throw new Error(
+            `无法连接上传服务（${networkErr instanceof Error ? networkErr.message : "网络错误"}），请检查网络或登录是否过期`
+          );
+        }
 
         if (presignErr || !presignData) {
           throw new Error(presignErr?.message || "获取上传地址失败");
@@ -308,11 +318,18 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
         const { presignedUrl, publicUrl } = presignData;
 
         // 步骤 2：直传 COS（浏览器 → COS，不经 Edge Function 中转）
-        const uploadRes = await fetch(presignedUrl, {
-          method: "PUT",
-          headers: { "Content-Type": result.blob.type },
-          body: result.blob,
-        });
+        let uploadRes: Response;
+        try {
+          uploadRes = await fetch(presignedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": result.blob.type },
+            body: result.blob,
+          });
+        } catch (networkErr) {
+          throw new Error(
+            `无法连接对象存储（${networkErr instanceof Error ? networkErr.message : "网络错误"}）`
+          );
+        }
 
         if (!uploadRes.ok) {
           throw new Error(`COS 上传失败 (${uploadRes.status})`);
@@ -402,9 +419,9 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
 
     const syncChanges = useCallback(
       async (slug: string): Promise<{ success: boolean; error?: string }> => {
-        // Delete removed
-        for (const id of removedIds) {
-          await deleteGalleryImage(id);
+        // Delete removed (DB + COS)
+        for (const img of removedImages) {
+          await deleteGalleryImage(img.id, img.url);
         }
 
         // Update sort order
@@ -422,7 +439,7 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
 
         return { success: true };
       },
-      [removedIds, savedImages, pendingFiles, uploadAll]
+      [removedImages, savedImages, pendingFiles, uploadAll]
     );
 
     const getFirstPendingFile = useCallback(() => {
@@ -434,7 +451,7 @@ const GalleryUploader = forwardRef<GalleryUploaderHandle, Props>(
     useImperativeHandle(ref, () => ({ uploadAll, syncChanges, getFirstPendingFile }), [
       pendingFiles,
       savedImages,
-      removedIds,
+      removedImages,
       postType,
       uploadAll,
       syncChanges,
