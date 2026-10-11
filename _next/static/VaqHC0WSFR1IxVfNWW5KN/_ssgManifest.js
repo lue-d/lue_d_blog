@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fadmin\u002F[type]","\u002Fadmin\u002F[type]\u002Fedit","\u002Fadmin\u002F[type]\u002Fnew","\u002Fcalligraphy\u002F[slug]","\u002Fphotography\u002F[slug]","\u002Freflections\u002F[slug]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
